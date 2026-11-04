@@ -335,6 +335,23 @@ details.card li b{font-family:var(--f-num);font-weight:500;color:var(--fg);margi
 .sheet .sh-items .ed{font-size:12px;height:22px;font-weight:400}
 .sheet textarea.ed.note{resize:vertical;min-height:70px;font-weight:700;line-height:1.5}
 .seal{z-index:1}
+#mod-quote .tabs{margin-top:10px}
+.ftag{display:inline-block;font-size:11px;font-weight:700;border-radius:6px;padding:3px 8px;white-space:nowrap;color:#fff}
+.ftag.xlsx{background:var(--dl-xlsx)}
+.ftag.docx{background:var(--dl-docx)}
+.ftag.pdf{background:var(--dl-pdf)}
+.htable{min-width:680px}
+.htable tbody tr{cursor:default}
+.htable tbody tr:hover td{background:transparent}
+.htable td{vertical-align:middle}
+.htable .hname b{font-weight:600;overflow-wrap:anywhere}
+.htable .hact{text-align:right;white-space:nowrap}
+.htable .hact .btn{padding:5px 10px;margin-left:6px}
+.htable tr.hconfirm td{background:var(--danger-soft);color:var(--danger);font-weight:600}
+.htable tr.hconfirm td{display:table-cell}
+.htable tr.hconfirm .hact{float:right}
+.listbar .chips{flex:1}
+.hist-note{margin:10px 2px 0}
 :root{--dl-xlsx:#1e7145;--dl-docx:#2b579a;--dl-pdf:#c0321f;--dl-fg:#ffffff}
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--dl-xlsx:#24854f;--dl-docx:#3466b3;--dl-pdf:#cf3a26}}
 :root[data-theme="dark"]{--dl-xlsx:#24854f;--dl-docx:#3466b3;--dl-pdf:#cf3a26}
@@ -364,13 +381,17 @@ details.card li b{font-family:var(--f-num);font-weight:500;color:var(--fg);margi
         <h1>견적서 양식</h1>
         <p>견적서 칸을 눌러 바로 입력하세요. 수량과 단가를 넣으면 합계와 공급가액이 자동으로 계산되고, 입력한 내용 그대로 엑셀·워드·PDF로 받을 수 있어요.</p>
       </div>
-      <div class="tpl-actions">
+      <div class="tpl-actions" id="qActions">
         <button class="btn primary" data-fmt="xlsx" data-tpl="xlsx" disabled><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11"/><path d="m7 10 5 5 5-5"/><path d="M5 20h14"/></svg>엑셀 다운로드</button>
         <button class="btn primary" data-fmt="docx" data-tpl="docx" disabled><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11"/><path d="m7 10 5 5 5-5"/><path d="M5 20h14"/></svg>워드 다운로드</button>
         <button class="btn primary" data-fmt="pdf" data-tpl="pdf" disabled><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11"/><path d="m7 10 5 5 5-5"/><path d="M5 20h14"/></svg>PDF 다운로드</button>
       </div>
     </div>
-    <section class="view">
+    <div class="tabs" role="tablist">
+      <button class="tab" role="tab" id="qtabEdit" aria-selected="true">기본 양식</button>
+      <button class="tab" role="tab" id="qtabHist" aria-selected="false">저장내역<span class="count" id="histCount">0</span></button>
+    </div>
+    <section class="view" id="qviewEdit">
       <div class="tpl-preview">
         <div class="preview-head">
           <span>입력한 내용은 이 브라우저에 자동으로 임시 저장돼요.</span>
@@ -383,6 +404,20 @@ details.card li b{font-family:var(--f-num);font-weight:500;color:var(--fg);margi
         </div>
         <div class="sheet-frame" id="sheetFrame"><div class="sheet-scale" id="sheetScale"><div class="sheet" id="sheet"></div></div></div>
       </div>
+    </section>
+    <section class="view" id="qviewHist" hidden>
+      <div class="listbar">
+        <div class="chips" id="histChips"></div>
+        <input class="inp" id="histSearch" type="search" placeholder="파일 이름, 거래처, 공사명 검색">
+      </div>
+      <div class="tablewrap">
+        <table class="qlist htable" id="histTable">
+          <thead><tr><th>종류</th><th>파일</th><th class="r">공급가액</th><th>저장한 날짜</th><th class="r">관리</th></tr></thead>
+          <tbody id="histRows"></tbody>
+        </table>
+        <div class="empty" id="histEmpty" hidden></div>
+      </div>
+      <p class="hint hist-note">저장내역은 이 브라우저에만 남아요. 다른 컴퓨터나 브라우저, 시크릿 창에서는 보이지 않아요. 다운받기를 누르면 저장할 때 입력한 내용 그대로 파일을 다시 만들어요.</p>
     </section>
    </div>
    <div class="module" id="mod-closing" hidden>
@@ -517,11 +552,11 @@ function hangulAmount(n) {
 }
 const hasVal = (v) => String(v ?? '').trim() !== '';
 const lineSum = (it) => hasVal(it.qty) && hasVal(it.price) ? num(it.qty) * num(it.price) : null;
-const quoteTotal = () => Q.items.reduce((s, it) => s + (lineSum(it) || 0), 0);
+const quoteTotal = (q = Q) => q.items.reduce((s, it) => s + (lineSum(it) || 0), 0);
 const rowFilled = (it) => ITEM_KEYS.some(k => hasVal(it[k]));
-const quoteTouched = () => {
+const quoteTouched = (q = Q) => {
   const b = blankQuote();
-  return Object.keys(b).some(k => k !== 'items' && k !== 's_date' && String(Q[k] ?? '') !== String(b[k] ?? '')) || Q.items.some(rowFilled);
+  return Object.keys(b).some(k => k !== 'items' && k !== 's_date' && String(q[k] ?? '') !== String(b[k] ?? '')) || q.items.some(rowFilled);
 };
 
 /* ---------- editable sheet ---------- */
@@ -620,10 +655,10 @@ $('q-reset-yes').addEventListener('click', () => {
 });
 
 /* ---------- exports ---------- */
-function quoteFileBase() {
-  if (!quoteTouched()) return '견적서_기본양식';
-  const who = (Q.client || '').replace(/[\\/:*?"<>|]/g, '').trim();
-  const date = (Q.s_date || todaySlash()).replace(/[^0-9]/g, '');
+function quoteFileBase(q = Q) {
+  if (!quoteTouched(q)) return '견적서_기본양식';
+  const who = (q.client || '').replace(/[\\/:*?"<>|]/g, '').trim();
+  const date = (q.s_date || todaySlash()).replace(/[^0-9]/g, '');
   return `견적서_${who || '수신처미정'}_${date}`;
 }
 const cellVal = (v) => { const s = String(v ?? '').trim(); if (!s) return ''; const n = Number(s.replace(/,/g, '')); return s !== '' && /^-?[\d,]+(\.\d+)?$/.test(s) && isFinite(n) ? n : s; };
@@ -637,17 +672,17 @@ function setCell(xml, ref, val) {
   else el = `<c r="${ref}"${attrs} t="inlineStr"><is><t xml:space="preserve">${XML(val)}</t></is></c>`;
   return xml.replace(re, () => el);
 }
-async function buildQuoteXlsx() {
+async function buildQuoteXlsx(q = Q) {
   if (!window.JSZip) throw { code: 'lib' };
   const zip = await JSZip.loadAsync(b64Bytes(XLSX_TPL));
   const path = 'xl/worksheets/sheet1.xml';
   let x = await zip.file(path).async('string');
   const left = ['client', 'contact', 'email', 'no', 'payment', 'validity', 'project', 'delivery', 'schedule'];
-  left.forEach((k, i) => { x = setCell(x, `C${3 + i}`, String(Q[k] ?? '')); });
+  left.forEach((k, i) => { x = setCell(x, `C${3 + i}`, String(q[k] ?? '')); });
   const right = ['s_name', 's_address', 's_ceo', 's_telfax', null, 's_web', 's_staff', 's_staffContact', 's_date'];
-  right.forEach((k, i) => { if (k) x = setCell(x, `H${3 + i}`, String(Q[k] ?? '')); });
-  x = setCell(x, 'G7', String(Q.s_cert ?? ''));
-  Q.items.forEach((it, i) => {
+  right.forEach((k, i) => { if (k) x = setCell(x, `H${3 + i}`, String(q[k] ?? '')); });
+  x = setCell(x, 'G7', String(q.s_cert ?? ''));
+  q.items.forEach((it, i) => {
     const r = 16 + i;
     x = setCell(x, `B${r}`, String(it.name ?? ''));
     x = setCell(x, `C${r}`, cellVal(it.lpm));
@@ -657,18 +692,18 @@ async function buildQuoteXlsx() {
     x = setCell(x, `G${r}`, hasVal(it.price) ? num(it.price) : '');
     x = setCell(x, `I${r}`, String(it.note ?? ''));
   });
-  x = setCell(x, 'A34', String(Q.note ?? ''));
+  x = setCell(x, 'A34', String(q.note ?? ''));
   zip.file(path, x);
   return zip.generateAsync({ type: 'blob', mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
 }
-async function buildQuoteDocx() {
+async function buildQuoteDocx(q = Q) {
   if (!window.JSZip) throw { code: 'lib' };
   const zip = await JSZip.loadAsync(b64Bytes(DOCX_TPL));
   let x = await zip.file('word/document.xml').async('string');
-  const t = quoteTotal(), touched = quoteTouched();
-  const vals = { ...Q, amount_kr: touched ? hangulAmount(t) : '                              ', amount: touched ? won(t) : '                    ', total: t ? won(t) : '' };
+  const t = quoteTotal(q), touched = quoteTouched(q);
+  const vals = { ...q, amount_kr: touched ? hangulAmount(t) : '                              ', amount: touched ? won(t) : '                    ', total: t ? won(t) : '' };
   let n = 0;
-  Q.items.forEach((it, i) => {
+  q.items.forEach((it, i) => {
     const r = i + 1, s = lineSum(it);
     vals[`r${r}_no`] = rowFilled(it) ? String(++n) : '';
     ITEM_KEYS.forEach(k => { vals[`r${r}_${k}`] = k === 'price' ? (hasVal(it.price) ? won(num(it.price)) : '') : (it[k] ?? ''); });
@@ -681,7 +716,7 @@ async function buildQuoteDocx() {
 
 /* PDF: draw the quote on a canvas page by page (same layout as the sheet) and wrap it in a PDF */
 const loadImg = (src) => new Promise((res, rej) => { const im = new Image(); im.onload = () => res(im); im.onerror = rej; im.src = src; });
-async function buildQuotePdf() {
+async function buildQuotePdf(q = Q) {
   const FF = '"Nanum Gothic","Apple SD Gothic Neo","Malgun Gothic","Noto Sans CJK KR",sans-serif';
   try { await Promise.all(['400', '700', '800'].map(w => document.fonts.load(`${w} 12px "Nanum Gothic"`))); } catch (e) {}
   const [seal, logo] = await Promise.all([loadImg(SEAL), loadImg(LOGO)]);
@@ -704,18 +739,18 @@ async function buildQuotePdf() {
   left.forEach(([lab, k], i) => {
     const yy = top + i * RH, cy = yy + RH / 2;
     T(lab, PX + 4, cy);
-    if (i === 0) { T(Q.client, PX + 94, cy, { maxW: 180 }); T('귀하', PX + 306, cy, { align: 'right' }); }
-    else T(Q[k], PX + 94, cy, { maxW: 210 });
+    if (i === 0) { T(q.client, PX + 94, cy, { maxW: 180 }); T('귀하', PX + 306, cy, { align: 'right' }); }
+    else T(q[k], PX + 94, cy, { maxW: 210 });
     hl(PX, PX + 306, yy + RH - 0.75);
   });
   const rx = PX + 306 + 76, rw = IW - 306 - 76, lw = 98;
   const right = [['상    호', 's_name'], ['주    소', 's_address'], ['대    표', 's_ceo'], ['TEL/ FAX', 's_telfax'], null, ['H-Page', 's_web'], ['담당자', 's_staff'], ['H.P/E-mail', 's_staffContact'], ['견적일자', 's_date']];
   right.forEach((r, i) => {
     const yy = top + i * RH, cy = yy + RH / 2;
-    if (!r) { rect(rx, yy, rw, RH, null, 0, '#f3f3f3'); T(Q.s_cert, rx + rw / 2, cy, { size: 11.5, color: '#1a5fd6', align: 'center', ff: `Arial,${FF}`, maxW: rw - 8 }); }
+    if (!r) { rect(rx, yy, rw, RH, null, 0, '#f3f3f3'); T(q.s_cert, rx + rw / 2, cy, { size: 11.5, color: '#1a5fd6', align: 'center', ff: `Arial,${FF}`, maxW: rw - 8 }); }
     else {
       T(r[0], rx + lw / 2, cy, { align: 'center' });
-      T(Q[r[1]], rx + lw + 6, cy, { maxW: rw - lw - 10, size: r[1] === 's_address' ? 11.5 : 12.5 });
+      T(q[r[1]], rx + lw + 6, cy, { maxW: rw - lw - 10, size: r[1] === 's_address' ? 11.5 : 12.5 });
       g.strokeStyle = INK; g.lineWidth = 1.5; g.beginPath(); g.moveTo(rx + lw, yy); g.lineTo(rx + lw, yy + RH); g.stroke();
     }
     hl(rx, rx + rw, yy);
@@ -723,7 +758,7 @@ async function buildQuotePdf() {
   rect(rx, top, rw, RH * 9, INK, 1.5);
   g.drawImage(seal, rx + lw + 116, top - 17, 58, 58);
   y = top + RH * 9 + 8;
-  const t = quoteTotal();
+  const t = quoteTotal(q);
   T(`공급가액 : ${hangulAmount(t)} 원정`, PX + 30, y + 10, { size: 14, w: 800 });
   T(`(₩ ${won(t)}원) / VAT별도가`, W - PX - 22, y + 10, { size: 14, w: 800, align: 'right' });
   y += 24; g.fillStyle = INK; g.fillRect(PX, y, IW, 4); y += 4 + 12;
@@ -739,7 +774,7 @@ async function buildQuotePdf() {
   });
   y += 50;
   let n = 0;
-  Q.items.forEach((it) => {
+  q.items.forEach((it) => {
     grid(y, 24);
     const cy = y + 12, s = lineSum(it);
     const cells = [rowFilled(it) ? String(++n) : '', it.name, it.lpm, it.head, it.spec, it.qty, hasVal(it.price) ? won(num(it.price)) : '', s == null ? '' : won(s), it.note];
@@ -754,7 +789,7 @@ async function buildQuotePdf() {
   T('총합계', (cx[0] + cx[5]) / 2, y + 23, { size: 12, align: 'center' });
   if (t) T(won(t), cx[8] - 5, y + 23, { size: 12, align: 'right' });
   y += 46 + 6;
-  const noteLines = String(Q.note || '').split(/\r?\n/);
+  const noteLines = String(q.note || '').split(/\r?\n/);
   const nh = Math.max(104, 34 + noteLines.length * 17 + 12);
   rect(PX + 1.25, y + 1.25, IW - 2.5, nh - 2.5, INK, 2.5);
   T('특이사항', W / 2, y + 16, { size: 14, w: 800, align: 'center' });
@@ -765,24 +800,100 @@ async function buildQuotePdf() {
   return jpegPagesToPdf([blob], W * SC, H * SC);
 }
 
+const FMT = { xlsx: '엑셀', docx: '워드', pdf: 'PDF' };
+const buildQuote = (kind, q) => kind === 'xlsx' ? buildQuoteXlsx(q) : kind === 'docx' ? buildQuoteDocx(q) : buildQuotePdf(q);
+async function saveQuoteFile(kind, q, filename) {
+  const data = await buildQuote(kind, q);
+  await downloads.save({ filename, data });
+}
+const dlErr = (e, label) => {
+  const code = e && e.code;
+  if (code === 'declined') return;
+  if (code === 'rate_limited') toast('이미 저장 창이 열려 있어요. 그 창을 먼저 닫아 주세요.', 'err');
+  else if (code === 'lib') toast(`${label} 도구를 불러오지 못했어요. 페이지를 새로고침한 뒤 다시 눌러 주세요.`, 'err');
+  else toast(`${label} 파일을 만들지 못했어요. 잠시 후 다시 눌러 주세요.`, 'err');
+};
 document.querySelectorAll('[data-tpl]').forEach(btn => btn.addEventListener('click', async () => {
   const kind = btn.dataset.tpl;
   if (!downloads) return;
   const btns = document.querySelectorAll('[data-tpl]'); btns.forEach(b => b.disabled = true);
-  const label = { xlsx: '엑셀', docx: '워드', pdf: 'PDF' }[kind];
   try {
-    const data = kind === 'xlsx' ? await buildQuoteXlsx() : kind === 'docx' ? await buildQuoteDocx() : await buildQuotePdf();
-    const filename = `${quoteFileBase()}.${kind}`;
-    await downloads.save({ filename, data });
-    toast(`${filename}을(를) 받았어요.`);
-  } catch (e) {
-    const code = e && e.code;
-    if (code === 'declined') {}
-    else if (code === 'rate_limited') toast('이미 저장 창이 열려 있어요. 그 창을 먼저 닫아 주세요.', 'err');
-    else if (code === 'lib') toast(`${label} 도구를 불러오지 못했어요. 페이지를 새로고침한 뒤 다시 눌러 주세요.`, 'err');
-    else toast(`${label} 파일을 만들지 못했어요. 잠시 후 다시 눌러 주세요.`, 'err');
-  } finally { btns.forEach(b => b.disabled = !downloads); }
+    const snap = JSON.parse(JSON.stringify(Q));
+    const filename = `${quoteFileBase(snap)}.${kind}`;
+    await saveQuoteFile(kind, snap, filename);
+    addHistory(kind, filename, snap);
+    toast(`${filename}을(를) 받았어요. 저장내역에도 남겼어요.`);
+  } catch (e) { dlErr(e, FMT[kind]); }
+  finally { btns.forEach(b => b.disabled = !downloads); }
 }));
+
+/* ---------- 저장내역 (kept in this browser) ---------- */
+const H_KEY = 'pumpland-quote-history-v1';
+let HIST = [];
+try { const h = JSON.parse(localStorage.getItem(H_KEY) || '[]'); if (Array.isArray(h)) HIST = h; } catch (e) {}
+const H = { filter: 'all', q: '', confirm: null };
+const saveHist = () => { try { localStorage.setItem(H_KEY, JSON.stringify(HIST)); return true; } catch (e) { return false; } };
+function addHistory(kind, filename, snap) {
+  HIST.unshift({ id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), kind, filename, savedAt: Date.now(), client: snap.client || '', project: snap.project || '', total: quoteTotal(snap), data: snap });
+  if (HIST.length > 300) HIST.length = 300;
+  if (!saveHist()) toast('저장내역 공간이 가득 찼어요. 오래된 내역을 지운 뒤 다시 받아 주세요.', 'err');
+  renderHistory();
+}
+const fmtStamp = (t) => { const d = new Date(t); const p = (n) => String(n).padStart(2, '0'); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`; };
+function renderHistory() {
+  $('histCount').textContent = HIST.length;
+  const counts = { all: HIST.length, xlsx: 0, docx: 0, pdf: 0 };
+  HIST.forEach(h => counts[h.kind]++);
+  $('histChips').innerHTML = [['all', '전체'], ['xlsx', '엑셀'], ['docx', '워드'], ['pdf', 'PDF']]
+    .map(([k, l]) => `<button class="chip" data-hf="${k}" aria-pressed="${H.filter === k}">${l}<i>${counts[k]}</i></button>`).join('');
+  const q = H.q.trim().toLowerCase();
+  const rows = HIST.filter(h => (H.filter === 'all' || h.kind === H.filter) && (!q || [h.filename, h.client, h.project].some(v => String(v || '').toLowerCase().includes(q))));
+  const empty = $('histEmpty');
+  if (!rows.length) {
+    $('histRows').innerHTML = '';
+    empty.hidden = false;
+    empty.innerHTML = HIST.length ? '<b>조건에 맞는 내역이 없어요</b>다른 종류를 고르거나 검색어를 바꿔 보세요.' : '<b>아직 저장한 견적서가 없어요</b>기본 양식 탭에서 견적서를 작성하고 다운로드하면 여기에 기록돼요.';
+    return;
+  }
+  empty.hidden = true;
+  $('histRows').innerHTML = rows.map(h => {
+    if (H.confirm === h.id) return `<tr class="hconfirm"><td colspan="5"><span>${esc(h.filename)} 내역을 삭제할까요? 받은 파일은 지워지지 않아요.</span><span class="hact"><button class="btn danger" data-hdel-yes="${h.id}">삭제</button><button class="btn" data-hdel-no="1">취소</button></span></td></tr>`;
+    return `<tr>
+      <td><span class="ftag ${h.kind}">${FMT[h.kind]}</span></td>
+      <td class="hname"><b>${esc(h.filename)}</b><div class="sub">${esc([h.client && h.client + ' 귀하', h.project].filter(Boolean).join(' · ') || '수신처 미입력')}</div></td>
+      <td class="mono r">${h.total ? won(h.total) : '-'}</td>
+      <td class="mono">${fmtStamp(h.savedAt)}</td>
+      <td class="hact"><button class="btn" data-hdl="${h.id}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11"/><path d="m7 10 5 5 5-5"/><path d="M5 20h14"/></svg>다운받기</button><button class="btn danger" data-hdel="${h.id}">삭제</button></td></tr>`;
+  }).join('');
+}
+$('histTable').addEventListener('click', async (e) => {
+  const dl = e.target.closest('[data-hdl]'), del = e.target.closest('[data-hdel]'), yes = e.target.closest('[data-hdel-yes]'), no = e.target.closest('[data-hdel-no]');
+  if (del) { H.confirm = del.dataset.hdel; renderHistory(); return; }
+  if (no) { H.confirm = null; renderHistory(); return; }
+  if (yes) { HIST = HIST.filter(h => h.id !== yes.dataset.hdelYes); H.confirm = null; saveHist(); renderHistory(); toast('내역을 삭제했어요.'); return; }
+  if (dl) {
+    const h = HIST.find(x => x.id === dl.dataset.hdl); if (!h || !downloads) return;
+    dl.disabled = true;
+    try { await saveQuoteFile(h.kind, h.data, h.filename); toast(`${h.filename}을(를) 다시 받았어요.`); }
+    catch (err) { dlErr(err, FMT[h.kind]); }
+    finally { dl.disabled = false; }
+  }
+});
+$('histChips').addEventListener('click', (e) => { const b = e.target.closest('[data-hf]'); if (b) { H.filter = b.dataset.hf; renderHistory(); } });
+$('histSearch').addEventListener('input', (e) => { H.q = e.target.value; renderHistory(); });
+
+/* sub tabs inside 견적서 양식 */
+function showQuoteTab(t) {
+  $('qtabEdit').setAttribute('aria-selected', t === 'edit');
+  $('qtabHist').setAttribute('aria-selected', t === 'hist');
+  $('qviewEdit').hidden = t !== 'edit';
+  $('qviewHist').hidden = t !== 'hist';
+  $('qActions').hidden = t !== 'edit';
+  if (t === 'edit') fitSheet(); else { H.confirm = null; renderHistory(); }
+}
+$('qtabEdit').addEventListener('click', () => showQuoteTab('edit'));
+$('qtabHist').addEventListener('click', () => showQuoteTab('hist'));
+renderHistory();
 
 renderQuoteSheet();
 
