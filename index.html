@@ -1,0 +1,1365 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body{margin:0}
+img{max-width:100%}
+[hidden]{display:none!important}
+</style>
+<title>견적·마감 업무 모듈</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=Nanum+Gothic:wght@400;700;800&display=swap">
+<style>
+/* Layout: navy module rail on the left, workspace on the right; the quote module splits into an input form and a live A4 sheet. */
+:root{
+  --bg:#eef1f6;
+  --surface:#ffffff;
+  --surface-2:#f6f8fb;
+  --line:#d9dfea;
+  --fg:#18203a;
+  --muted:#5b6582;
+  --accent:#23409c;
+  --accent-fg:#ffffff;
+  --accent-soft:#e3e9f8;
+  --lime:#9cc23a;
+  --rail:#17275a;
+  --rail-fg:#e8ecf8;
+  --rail-muted:#9aa6cc;
+  --danger:#b4232c;
+  --danger-soft:#fbe9ea;
+  --ok:#2f7d3f;
+  --ok-soft:#e4f2e7;
+  --warn:#8a5a00;
+  --warn-soft:#fbf0d6;
+  --cp:#b04a22;
+  --cp-soft:#fbe8de;
+  --paper:#ffffff;
+  --paper-ink:#111111;
+  --shadow:0 1px 2px rgba(20,30,70,.06),0 8px 24px rgba(20,30,70,.08);
+  --f-ui:"IBM Plex Sans KR","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;
+  --f-num:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;
+  --f-sheet:"Nanum Gothic","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0e1322;--surface:#161d31;--surface-2:#1b233b;--line:#2a3452;--fg:#e5e9f4;--muted:#9aa4c2;
+    --accent:#8fa7ff;--accent-fg:#0e1322;--accent-soft:#222d52;--rail:#0a0f1f;--rail-fg:#e5e9f4;--rail-muted:#8390b6;
+    --danger:#ff8a8f;--danger-soft:#3a1d24;--ok:#7fd18f;--ok-soft:#1b3325;--warn:#f0c060;--warn-soft:#3a3014;--cp:#ffab80;--cp-soft:#3d2418;--shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.35);
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0e1322;--surface:#161d31;--surface-2:#1b233b;--line:#2a3452;--fg:#e5e9f4;--muted:#9aa4c2;
+  --accent:#8fa7ff;--accent-fg:#0e1322;--accent-soft:#222d52;--rail:#0a0f1f;--rail-fg:#e5e9f4;--rail-muted:#8390b6;
+  --danger:#ff8a8f;--danger-soft:#3a1d24;--ok:#7fd18f;--ok-soft:#1b3325;--warn:#f0c060;--warn-soft:#3a3014;--cp:#ffab80;--cp-soft:#3d2418;--shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.35);
+  color-scheme:dark;
+}
+html,body{height:100%}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--fg);font-family:var(--f-ui);font-size:14px;line-height:1.5}
+*{box-sizing:border-box}
+button,input,textarea,select{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* ---------- shell ---------- */
+.shell{display:grid;grid-template-columns:232px minmax(0,1fr);min-height:100%}
+.rail{background:var(--rail);color:var(--rail-fg);display:flex;flex-direction:column;gap:28px;
+  padding-block:24px;padding-left:max(18px,env(safe-area-inset-left,0px));padding-right:18px;position:sticky;top:0;height:100vh}
+.brand{display:flex;flex-direction:column;gap:2px}
+.brand b{font-weight:700;letter-spacing:.14em;font-size:17px}
+.brand b i{font-style:normal;color:var(--lime)}
+.brand span{font-size:12px;color:var(--rail-muted)}
+.rail-label{font-size:11px;letter-spacing:.12em;color:var(--rail-muted);margin:0 0 8px}
+.mod-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:4px}
+.mod-btn{width:100%;display:flex;align-items:center;gap:10px;background:none;border:0;border-radius:8px;padding:9px 10px;color:var(--rail-fg);cursor:pointer;text-align:left;font-weight:500}
+.mod-btn:hover{background:rgba(255,255,255,.06)}
+.mod-btn[aria-current="page"]{background:rgba(255,255,255,.1);box-shadow:inset 3px 0 0 var(--lime)}
+.mod-btn svg{flex:none;opacity:.85}
+.rail-foot{margin-top:auto;font-size:12px;color:var(--rail-muted);display:flex;flex-direction:column;gap:4px}
+.dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--rail-muted);margin-right:6px;vertical-align:1px}
+.dot.on{background:var(--lime)}
+.dot.warn{background:#e0a83a}
+
+.main{min-width:0;display:flex;flex-direction:column}
+.topbar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;
+  padding-block:18px 0;padding-left:max(24px,env(safe-area-inset-left,0px));padding-right:max(24px,env(safe-area-inset-right,0px))}
+.topbar h1{margin:0;font-size:20px;font-weight:700;text-wrap:balance}
+.topbar p{margin:2px 0 0;color:var(--muted);font-size:13px}
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin-top:14px;
+  padding-left:max(24px,env(safe-area-inset-left,0px));padding-right:max(24px,env(safe-area-inset-right,0px))}
+.tab{background:none;border:0;padding:10px 12px;cursor:pointer;color:var(--muted);font-weight:600;border-bottom:2px solid transparent;margin-bottom:-1px}
+.tab[aria-selected="true"]{color:var(--fg);border-bottom-color:var(--accent)}
+.tab .count{font-family:var(--f-num);font-size:12px;background:var(--accent-soft);color:var(--accent);border-radius:99px;padding:1px 7px;margin-left:6px}
+.view{padding-block:20px 40px;padding-left:max(24px,env(safe-area-inset-left,0px));padding-right:max(24px,env(safe-area-inset-right,0px))}
+
+/* ---------- buttons ---------- */
+.btn{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:7px 12px;cursor:pointer;font-weight:600;font-size:13px;white-space:nowrap}
+.btn:hover{border-color:var(--muted)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-fg)}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn.danger{color:var(--danger)}
+.btn.ghost{border-color:transparent;background:transparent}
+.btn:disabled{opacity:.45;cursor:not-allowed;filter:none}
+
+/* ---------- editor ---------- */
+.toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:16px}
+.toolbar .grow{flex:1}
+.docstate{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px}
+.docstate b{font-family:var(--f-num);font-weight:500;color:var(--fg)}
+.pill{font-size:11px;font-weight:600;border-radius:99px;padding:2px 8px;background:var(--accent-soft);color:var(--accent)}
+.pill.dirty{background:var(--danger-soft);color:var(--danger)}
+
+.editor{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:20px;align-items:start}
+.formcol{display:flex;flex-direction:column;gap:16px;min-width:0}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px 18px;min-width:0}
+.card h2{font-size:13px;font-weight:700;margin:0 0 12px;display:flex;align-items:baseline;gap:8px}
+.card h2 small{font-weight:400;color:var(--muted);font-size:12px}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 14px}
+.field{display:flex;flex-direction:column;gap:4px;min-width:0}
+.field.full{grid-column:1/-1}
+.field label{font-size:12px;color:var(--muted);font-weight:500}
+.inp{width:100%;border:1px solid var(--line);background:var(--surface-2);border-radius:7px;padding:7px 9px;min-width:0}
+.inp:focus{background:var(--surface);border-color:var(--accent);outline:none;box-shadow:0 0 0 3px var(--accent-soft)}
+textarea.inp{resize:vertical;min-height:84px}
+.hint{font-size:11px;color:var(--muted)}
+
+.items-wrap{overflow-x:auto;margin:0 -4px;padding:0 4px}
+table.items{border-collapse:separate;border-spacing:0 6px;width:100%;min-width:760px}
+table.items th{font-size:11px;font-weight:600;color:var(--muted);text-align:left;padding:0 4px;white-space:nowrap}
+table.items td{padding:0 3px;vertical-align:middle}
+table.items .inp{padding:6px 7px;font-size:13px}
+table.items .num{text-align:right;font-family:var(--f-num);font-variant-numeric:tabular-nums}
+.rowno{font-family:var(--f-num);color:var(--muted);font-size:12px;text-align:center;width:24px}
+.linesum{font-family:var(--f-num);font-variant-numeric:tabular-nums;text-align:right;font-size:13px;white-space:nowrap;padding-right:6px!important}
+.xbtn{border:0;background:none;color:var(--muted);cursor:pointer;border-radius:6px;padding:4px 6px;font-size:16px;line-height:1}
+.xbtn:hover{color:var(--danger);background:var(--danger-soft)}
+.totals{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:12px}
+.tot{background:var(--surface-2);border-radius:8px;padding:8px 12px;display:flex;flex-direction:column}
+.tot span{font-size:11px;color:var(--muted)}
+.tot b{font-family:var(--f-num);font-weight:500;font-size:15px;font-variant-numeric:tabular-nums}
+.tot.main b{color:var(--accent)}
+
+.previewcol{position:sticky;top:16px;min-width:0;display:flex;flex-direction:column;gap:8px}
+.preview-head{display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--muted)}
+.sheet-frame{overflow:hidden;border-radius:4px;box-shadow:var(--shadow);background:var(--paper)}
+.sheet-scale{transform-origin:0 0;width:794px}
+
+.seg{display:none}
+
+/* ---------- the quote sheet (A4 @ 96dpi = 794 x 1123) ---------- */
+.sheet{width:794px;min-height:1123px;background:var(--paper);color:var(--paper-ink);font-family:var(--f-sheet);padding:26px 22px 30px;font-size:12.5px;line-height:1.3}
+.sh-title{text-align:center;font-size:30px;font-weight:800;letter-spacing:.35em;margin:0 0 10px;padding-left:.35em}
+.sh-rule{height:4px;background:var(--paper-ink)}
+.sh-top{display:grid;grid-template-columns:306px 1fr;gap:76px;margin-top:20px}
+.lrow{display:flex;align-items:center;min-height:24.5px;border-bottom:1.5px solid var(--paper-ink);font-weight:700;gap:12px;padding:0 0 0 4px}
+.lrow .lk{flex:none;width:78px;white-space:nowrap}
+.lrow .lk.sp{letter-spacing:.6em}
+.lrow .lv{font-weight:700;min-width:0;overflow-wrap:anywhere}
+.lrow .lv.client{flex:1;display:flex;justify-content:space-between;gap:8px}
+.rtab{width:100%;border-collapse:collapse;border:1.5px solid var(--paper-ink)}
+.rtab td{border:1.5px solid var(--paper-ink);height:24.5px;padding:0 6px;font-weight:700}
+.rtab td.rk{width:98px;text-align:center;white-space:nowrap}
+.rtab td.rk.sp{letter-spacing:1.4em;padding-left:calc(6px + 1.4em)}
+.rtab td.rv{position:relative;overflow-wrap:anywhere}
+.rtab tr.cert td{background:#f3f3f3;color:#1a5fd6;text-align:center;font-family:Arial,var(--f-sheet);font-size:11.5px}
+.seal{position:absolute;right:14px;top:-17px;width:58px;height:58px;object-fit:contain;pointer-events:none}
+.imgpick{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.imgpick img{width:44px;height:44px;object-fit:contain;border:1px solid var(--line);border-radius:6px;background:var(--paper)}
+.imgpick img.wide{width:120px}
+.sh-amount{display:flex;justify-content:space-between;align-items:flex-end;font-size:14px;font-weight:800;padding:8px 22px 4px 30px}
+.sh-lead{text-align:right;font-weight:700;margin:12px 4px 14px}
+.sh-items{width:100%;border-collapse:collapse;table-layout:fixed}
+.sh-items th,.sh-items td{border:1.5px solid #9b9b9b;padding:3px 5px;font-size:12px}
+.sh-items th{background:#f5f5f5;font-weight:700;height:50px;line-height:1.35}
+.sh-items td{height:24px;overflow-wrap:anywhere}
+.sh-items td.c{text-align:center}
+.sh-items td.r{text-align:right;font-variant-numeric:tabular-nums}
+.sh-items tr.total td{height:46px;font-weight:700}
+.sh-note{border:2.5px solid var(--paper-ink);margin-top:6px;min-height:104px;padding:6px 14px 12px}
+.sh-note h3{text-align:center;margin:0 0 6px;font-size:14px;font-weight:800}
+.sh-note div{white-space:pre-wrap;font-weight:700;overflow-wrap:anywhere}
+.sh-logo{display:block;margin:30px auto 0;width:236px}
+
+/* ---------- list ---------- */
+.listbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
+.listbar .inp{max-width:320px}
+.tablewrap{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:12px}
+table.qlist{width:100%;border-collapse:collapse;min-width:720px}
+.qlist th{font-size:12px;color:var(--muted);font-weight:600;text-align:left;padding:10px 14px;border-bottom:1px solid var(--line);background:var(--surface-2);white-space:nowrap}
+.qlist td{padding:11px 14px;border-bottom:1px solid var(--line);vertical-align:top}
+.qlist tr:last-child td{border-bottom:0}
+.qlist tbody tr{cursor:pointer}
+.qlist tbody tr:hover td{background:var(--surface-2)}
+.qlist .mono{font-family:var(--f-num);font-variant-numeric:tabular-nums;white-space:nowrap}
+.qlist .r{text-align:right}
+.qlist .sub{font-size:12px;color:var(--muted)}
+.empty{padding:36px 20px;text-align:center;color:var(--muted)}
+.empty b{display:block;color:var(--fg);font-size:15px;margin-bottom:6px}
+
+/* ---------- toast / confirm ---------- */
+.toast-area{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(20px + env(safe-area-inset-bottom,0px));z-index:30;display:flex;flex-direction:column;gap:8px;align-items:center;width:min(520px,calc(100% - 32px))}
+.toast{background:var(--fg);color:var(--bg);border-radius:10px;padding:10px 14px;font-size:13px;box-shadow:var(--shadow);display:flex;gap:12px;align-items:center;flex-wrap:wrap;justify-content:center}
+.toast .btn{padding:5px 10px}
+.toast .btn.ghost{color:var(--bg)}
+.toast.err{background:var(--danger);color:#fff}
+
+/* ---------- 온라인 마감 대조 ---------- */
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0;padding:0;margin:-1px}
+.csettings{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px 16px}
+.uploads{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-top:16px}
+.uphead{display:flex;gap:10px;align-items:flex-start;margin-bottom:12px}
+.uphead h2{margin:0 0 2px}
+.uphead p{margin:0}
+.srcmark{flex:none;font-size:11px;font-weight:700;border-radius:6px;padding:3px 7px;margin-top:1px}
+.srcmark.erp{background:var(--accent-soft);color:var(--accent)}
+.srcmark.cp{background:var(--cp-soft);color:var(--cp)}
+.drop{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;border:1.5px dashed var(--line);border-radius:10px;padding:22px 14px;text-align:center;cursor:pointer;background:var(--surface-2);min-width:0}
+.drop b{font-weight:600;overflow-wrap:anywhere}
+.drop span{font-size:12px;color:var(--muted)}
+.drop:hover,.drop.over{border-color:var(--accent);background:var(--accent-soft)}
+.drop.loaded{border-style:solid;align-items:flex-start;text-align:left;padding:12px 14px}
+.drop:focus-within{outline:2px solid var(--accent);outline-offset:2px}
+.mapgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 12px;margin-top:12px}
+select.inp{padding:6px 8px}
+select.inp.warn{border-color:var(--danger);background:var(--danger-soft)}
+.exchip{font-size:11px;font-weight:700;background:var(--warn-soft);color:var(--warn);border-radius:99px;padding:1px 8px;margin-left:6px;vertical-align:1px}
+
+#c-result{margin-top:20px;display:flex;flex-direction:column;gap:14px}
+.cempty{text-align:center;padding:28px 20px;color:var(--muted);display:flex;flex-direction:column;align-items:center;gap:8px}
+.cempty b{color:var(--fg);font-size:15px}
+.cempty p{margin:0;max-width:52ch}
+.rhead{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.rhead h2{margin:0;font-size:17px;text-wrap:balance}
+.exbanner{background:var(--warn-soft);color:var(--warn);border-radius:10px;padding:10px 14px;font-size:13px;font-weight:600}
+.ctiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.ctile{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 16px;display:flex;flex-direction:column;gap:2px;min-width:0}
+.ctile span{font-size:12px;color:var(--muted)}
+.ctile b{font-family:var(--f-num);font-weight:500;font-size:22px;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.ctile small{font-size:12px;color:var(--muted)}
+.ctile.delta.ok{background:var(--ok-soft);border-color:transparent}
+.ctile.delta.ok b{color:var(--ok)}
+.ctile.delta.bad{background:var(--danger-soft);border-color:transparent}
+.ctile.delta.bad b{color:var(--danger)}
+.breakdown h3{font-size:13px;margin:0 0 8px}
+.breakdown table{width:100%;border-collapse:collapse}
+.breakdown td{padding:6px 0;border-bottom:1px solid var(--line)}
+.breakdown td.n{text-align:right;font-family:var(--f-num);font-variant-numeric:tabular-nums;white-space:nowrap}
+.breakdown tr.sum td{border-bottom:0;font-weight:700;padding-top:8px}
+.rtools{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.rtools .inp{max-width:240px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{border:1px solid var(--line);background:var(--surface);border-radius:99px;padding:5px 11px;font-size:12px;font-weight:600;cursor:pointer;color:var(--fg)}
+.chip[aria-pressed="true"]{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.chip i{font-style:normal;font-family:var(--f-num);font-weight:500;margin-left:4px;opacity:.8}
+.st{display:inline-block;font-size:11px;font-weight:700;border-radius:99px;padding:2px 8px;white-space:nowrap}
+.st.ok{background:var(--ok-soft);color:var(--ok)}
+.st.bad{background:var(--danger-soft);color:var(--danger)}
+.st.erp{background:var(--accent-soft);color:var(--accent)}
+.st.cp{background:var(--cp-soft);color:var(--cp)}
+.carry{font-size:11px;font-weight:700;color:var(--warn);margin-left:6px;white-space:nowrap}
+.ctable td.neg{color:var(--danger)}
+.ctable .dim{color:var(--muted)}
+.more{font-size:12px;color:var(--muted);padding:10px 14px}
+details.card summary{cursor:pointer;font-weight:600}
+details.card ul{margin:10px 0 0;padding-left:18px;font-size:13px;color:var(--muted);display:flex;flex-direction:column;gap:4px}
+details.card li b{font-family:var(--f-num);font-weight:500;color:var(--fg);margin-right:8px}
+@media (max-width:820px){
+  .csettings,.uploads,.ctiles,.mapgrid{grid-template-columns:minmax(0,1fr)}
+}
+
+@media (max-width:1180px){
+  .editor{grid-template-columns:minmax(0,1fr)}
+  .previewcol{position:static}
+  .seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+  .seg button{border:0;background:var(--surface);padding:6px 12px;font-weight:600;font-size:13px;cursor:pointer;color:var(--muted)}
+  .seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-fg)}
+  .editor[data-pane="form"] .previewcol{display:none}
+  .editor[data-pane="preview"] .formcol{display:none}
+}
+@media (max-width:820px){
+  .shell{grid-template-columns:minmax(0,1fr)}
+  .rail{position:static;height:auto;flex-direction:row;align-items:center;flex-wrap:wrap;gap:12px 20px;padding-block:12px;
+    padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+  .rail-label,.rail-foot{display:none}
+  .mod-list{flex-direction:row}
+  .topbar,.tabs,.view{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+  .grid2{grid-template-columns:minmax(0,1fr)}
+  .totals{grid-template-columns:minmax(0,1fr)}
+}
+@media (prefers-reduced-motion:no-preference){
+  .btn,.mod-btn,.tab,.inp{transition:background-color .15s,border-color .15s,box-shadow .15s}
+}
+</style>
+
+</head>
+<body>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+<div class="shell">
+  <aside class="rail">
+    <div class="brand"><b>WORK<i>DESK</i></b><span>견적 · 마감 업무 모듈</span></div>
+    <nav aria-label="모듈">
+      <p class="rail-label">모듈</p>
+      <ul class="mod-list" id="modList"></ul>
+    </nav>
+    <div class="rail-foot">
+      <span id="syncState"><span class="dot"></span>준비 중</span>
+    </div>
+  </aside>
+
+  <main class="main">
+   <div class="module" id="mod-quote">
+    <div class="topbar">
+      <div>
+        <h1>견적서 작성</h1>
+        <p>입력하면 오른쪽 견적서가 바로 만들어지고, PDF로 내려받을 수 있어요.</p>
+      </div>
+    </div>
+    <div class="tabs" role="tablist">
+      <button class="tab" role="tab" id="tabEdit" aria-selected="true">작성</button>
+      <button class="tab" role="tab" id="tabList" aria-selected="false">저장된 견적서<span class="count" id="quoteCount">0</span></button>
+    </div>
+
+    <!-- editor view -->
+    <section class="view" id="viewEdit">
+      <div class="toolbar">
+        <div class="docstate"><span id="docStatePill" class="pill">새 견적서</span> 견적번호 <b id="docNo"></b></div>
+        <div class="grow"></div>
+        <div class="seg" role="group" aria-label="보기">
+          <button id="segForm" aria-pressed="true">입력</button>
+          <button id="segPreview" aria-pressed="false">미리보기</button>
+        </div>
+        <button class="btn" id="btnNew">새 견적서</button>
+        <button class="btn" id="btnCopy">복제</button>
+        <button class="btn danger" id="btnDelete" hidden>삭제</button>
+        <button class="btn" id="btnSave">저장</button>
+        <button class="btn primary" id="btnPdf" disabled>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11"/><path d="m7 10 5 5 5-5"/><path d="M5 20h14"/></svg>
+          PDF 다운로드
+        </button>
+      </div>
+
+      <div class="editor" id="editor" data-pane="form">
+        <div class="formcol">
+          <div class="card">
+            <h2>수신처 <small>견적서 왼쪽 위에 들어가요</small></h2>
+            <div class="grid2">
+              <div class="field full"><label for="f-client">수신 (거래처명)</label><input class="inp" id="f-client" data-f="client" list="dl-clients" placeholder="예: OO건설" autocomplete="off"></div>
+              <div class="field"><label for="f-contact">담당자/TEL</label><input class="inp" id="f-contact" data-f="contact" placeholder="홍길동 대리 / 010-0000-0000"></div>
+              <div class="field"><label for="f-email">E-mail</label><input class="inp" id="f-email" data-f="email" placeholder="name@company.com"></div>
+            </div>
+          </div>
+
+          <div class="card">
+            <h2>견적 조건</h2>
+            <div class="grid2">
+              <div class="field"><label for="f-date">견적일자</label><input class="inp" type="date" id="f-date" data-f="date"></div>
+              <div class="field"><label for="f-no">견적번호</label><input class="inp" id="f-no" data-f="no"><span class="hint" id="noHint">견적일자 기준으로 자동 번호가 붙어요</span></div>
+              <div class="field full"><label for="f-project">공사명</label><input class="inp" id="f-project" data-f="project"></div>
+              <div class="field"><label for="f-payment">결제조건</label><input class="inp" id="f-payment" data-f="payment" list="dl-payment"></div>
+              <div class="field"><label for="f-validity">유효기간</label><input class="inp" id="f-validity" data-f="validity"></div>
+              <div class="field"><label for="f-delivery">인도조건</label><input class="inp" id="f-delivery" data-f="delivery" list="dl-delivery"></div>
+              <div class="field"><label for="f-schedule">납품일정</label><input class="inp" id="f-schedule" data-f="schedule"></div>
+            </div>
+          </div>
+
+          <div class="card">
+            <h2>품목 <small>품목명을 고르면 예전에 쓴 규격·단가가 채워져요</small></h2>
+            <div class="items-wrap">
+              <table class="items">
+                <thead><tr>
+                  <th></th><th style="width:24%">품목명[규격]</th><th>양수량(LPM)</th><th>양정(M)</th><th style="width:16%">규격</th><th>수량</th><th>단가</th><th style="text-align:right">합계</th><th>비고</th><th></th>
+                </tr></thead>
+                <tbody id="itemRows"></tbody>
+              </table>
+            </div>
+            <button class="btn ghost" id="btnAddItem" style="margin-top:4px">+ 품목 추가</button>
+            <div class="totals">
+              <div class="tot main"><span>공급가액</span><b id="tSupply">0</b></div>
+              <div class="tot"><span>부가세 10%</span><b id="tVat">0</b></div>
+              <div class="tot"><span>VAT 포함 합계</span><b id="tGrand">0</b></div>
+            </div>
+          </div>
+
+          <div class="card">
+            <h2>우리 쪽 담당자 · 특이사항</h2>
+            <div class="grid2">
+              <div class="field"><label for="f-staff">담당자</label><input class="inp" id="f-staff" data-f="staff" list="dl-staff"></div>
+              <div class="field"><label for="f-staffContact">H.P/E-mail</label><input class="inp" id="f-staffContact" data-f="staffContact"></div>
+              <div class="field full"><label for="f-note">특이사항</label><textarea class="inp" id="f-note" data-f="note" placeholder="예: 설치비 별도, 운반비 포함"></textarea></div>
+            </div>
+          </div>
+
+          <div class="card">
+            <h2>우리 회사 정보 <small>견적서 오른쪽 위 공급자 칸 · 이 브라우저에 기억돼요</small></h2>
+            <div class="grid2">
+              <div class="field full"><label for="s-name">상호</label><input class="inp" id="s-name" data-s="name" placeholder="예: OO산업 주식회사"></div>
+              <div class="field full"><label for="s-address">주소</label><input class="inp" id="s-address" data-s="address"></div>
+              <div class="field"><label for="s-ceo">대표</label><input class="inp" id="s-ceo" data-s="ceo"></div>
+              <div class="field"><label for="s-telfax">TEL/FAX</label><input class="inp" id="s-telfax" data-s="telfax" placeholder="02-000-0000 / 02-000-0001"></div>
+              <div class="field full"><label for="s-web">홈페이지</label><input class="inp" id="s-web" data-s="web"></div>
+              <div class="field full"><label for="s-cert">인증·소개 문구 (선택)</label><input class="inp" id="s-cert" data-s="cert" placeholder="예: ISO9001 인증획득"><span class="hint">비우면 견적서에서 이 줄이 빠져요</span></div>
+              <div class="field"><label for="s-seal-file">직인 이미지 (선택)</label>
+                <div class="imgpick"><img id="s-seal-prev" alt="직인 미리보기" hidden><label class="btn" for="s-seal-file">이미지 선택</label><input type="file" class="sr-only" id="s-seal-file" accept="image/png,image/jpeg,image/webp" data-img="seal"><button class="btn ghost" data-imgdel="seal" id="s-seal-del" hidden>지우기</button></div></div>
+              <div class="field"><label for="s-logo-file">로고 이미지 (선택)</label>
+                <div class="imgpick"><img id="s-logo-prev" class="wide" alt="로고 미리보기" hidden><label class="btn" for="s-logo-file">이미지 선택</label><input type="file" class="sr-only" id="s-logo-file" accept="image/png,image/jpeg,image/webp" data-img="logo"><button class="btn ghost" data-imgdel="logo" id="s-logo-del" hidden>지우기</button></div></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="previewcol">
+          <div class="preview-head"><span>견적서 미리보기 · A4</span><span id="pageInfo"></span></div>
+          <div class="sheet-frame" id="sheetFrame"><div class="sheet-scale" id="sheetScale"><div class="sheet" id="sheet"></div></div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- list view -->
+    <section class="view" id="viewList" hidden>
+      <div class="listbar">
+        <input class="inp" id="f-search" type="search" placeholder="거래처, 공사명, 견적번호 검색">
+        <span class="hint" id="listHint"></span>
+      </div>
+      <div class="tablewrap">
+        <table class="qlist">
+          <thead><tr><th>견적번호</th><th>수신</th><th>공사명</th><th class="r">공급가액</th><th>담당자</th><th>마지막 수정</th></tr></thead>
+          <tbody id="listRows"></tbody>
+        </table>
+        <div class="empty" id="listEmpty" hidden></div>
+      </div>
+    </section>
+   </div>
+   <div class="module" id="mod-closing" hidden>
+    <div class="topbar">
+      <div>
+        <h1>온라인 마감 대조</h1>
+        <p>이카운트 판매전표와 쿠팡 정산내역 엑셀을 올리면 주문번호별로 금액을 맞춰 봐요. 파일은 이 브라우저 안에서만 읽고 어디에도 저장하지 않아요.</p>
+      </div>
+    </div>
+    <section class="view cview">
+      <div class="card csettings">
+        <div class="field"><label for="c-month">대상 월</label><input class="inp" type="month" id="c-month"></div>
+        <div class="field"><label for="c-filter">이카운트 거래처 필터</label><input class="inp" id="c-filter" value="쿠팡"><span class="hint">거래처명에 이 단어가 들어간 전표만 비교해요. 비우면 전체를 비교해요.</span></div>
+        <div class="field"><label for="c-tol">금액 차이 허용 (원)</label><input class="inp" id="c-tol" inputmode="numeric" value="0"><span class="hint">이 금액 이하 차이는 일치로 봐요.</span></div>
+      </div>
+
+      <div class="uploads">
+        <div class="card upcard">
+          <div class="uphead"><span class="srcmark erp">ERP</span><div><h2>이카운트 판매전표</h2><p class="hint">판매현황 화면에서 엑셀로 내보낸 파일</p></div></div>
+          <label class="drop" id="drop-erp" for="file-erp" data-side="erp">
+            <input type="file" class="sr-only" id="file-erp" accept=".xlsx,.xls,.csv" data-side="erp">
+            <b id="drop-erp-title">엑셀 파일을 끌어다 놓거나 눌러서 선택</b>
+            <span id="drop-erp-sub">.xlsx · .xls · .csv</span>
+          </label>
+          <div id="map-erp" data-side="erp" hidden></div>
+        </div>
+        <div class="card upcard">
+          <div class="uphead"><span class="srcmark cp">쿠팡</span><div><h2>쿠팡 정산내역</h2><p class="hint">쿠팡 Wing 정산 메뉴에서 받은 매출·정산 엑셀</p></div></div>
+          <label class="drop" id="drop-cp" for="file-cp" data-side="cp">
+            <input type="file" class="sr-only" id="file-cp" accept=".xlsx,.xls,.csv" data-side="cp">
+            <b id="drop-cp-title">엑셀 파일을 끌어다 놓거나 눌러서 선택</b>
+            <span id="drop-cp-sub">.xlsx · .xls · .csv</span>
+          </label>
+          <div id="map-cp" data-side="cp" hidden></div>
+        </div>
+      </div>
+
+      <div id="c-result"></div>
+    </section>
+   </div>
+  </main>
+</div>
+
+<datalist id="dl-clients"></datalist>
+<datalist id="dl-items"></datalist>
+<datalist id="dl-staff"></datalist>
+<datalist id="dl-payment"><option value="현금 (납품 후 30일)"><option value="계약금 30% / 잔금 70%"><option value="협의"></datalist>
+<datalist id="dl-delivery"><option value="현장 도착도"><option value="당사 출고도"><option value="협의"></datalist>
+<div class="toast-area" id="toasts" aria-live="polite"></div>
+
+<script>
+/* ---------- module registry: add a new module here ---------- */
+const MODULES = [
+  { id: 'quote', name: '견적서 작성', icon: '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H6a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h4"/></svg>' },
+  { id: 'closing', name: '온라인 마감 대조', icon: '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="7" height="16" rx="1"/><rect x="14" y="4" width="7" height="16" rx="1"/><path d="M6 9h1M6 13h1M17 9h1M17 13h1"/></svg>' },
+];
+
+/* ---------- supplier info: typed by the user, remembered in this browser ---------- */
+const SUPPLIER_KEY = 'quote-supplier-v1';
+const blankSupplier = () => ({ name: '', address: '', ceo: '', telfax: '', web: '', cert: '', seal: '', logo: '' });
+function loadSupplierDefaults() {
+  try { return { ...blankSupplier(), ...(JSON.parse(localStorage.getItem(SUPPLIER_KEY) || 'null') || {}) }; } catch (e) { return blankSupplier(); }
+}
+function saveSupplierDefaults(sup) { try { localStorage.setItem(SUPPLIER_KEY, JSON.stringify(sup)); } catch (e) {} }
+const safeImg = (u) => typeof u === 'string' && /^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+\/=]+$/.test(u) ? u : '';
+const DRAFT_KEY = 'quote-draft-v2';
+
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const num = (v) => { const n = parseFloat(String(v ?? '').replace(/[^0-9.\-]/g, '')); return isFinite(n) ? n : 0; };
+const won = (n) => Math.round(n).toLocaleString('ko-KR');
+const todayISO = () => { const d = new Date(); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); return d.toISOString().slice(0, 10); };
+const slashDate = (iso) => (iso || '').replace(/-/g, '/');
+
+function hangulAmount(n) {
+  n = Math.floor(Math.abs(n));
+  if (!n) return '영';
+  const d = ['', '일', '이', '삼', '사', '오', '육', '칠', '팔', '구'];
+  const small = ['', '십', '백', '천'];
+  const big = ['', '만', '억', '조', '경'];
+  let out = '', k = 0;
+  while (n > 0) {
+    const g = n % 10000;
+    if (g) {
+      let s = '';
+      for (let i = 3; i >= 0; i--) { const x = Math.floor(g / 10 ** i) % 10; if (x) s += d[x] + small[i]; }
+      out = s + big[k] + out;
+    }
+    n = Math.floor(n / 10000); k++;
+  }
+  return out;
+}
+
+const blankItem = () => ({ name: '', lpm: '', head: '', spec: '', qty: 1, price: '', note: '' });
+function newDraft() {
+  return {
+    client: '', contact: '', email: '', date: todayISO(), no: '', noAuto: true,
+    payment: '', validity: '견적후 30일', project: '', delivery: '', schedule: '',
+    staff: '', staffContact: '', supplier: loadSupplierDefaults(),
+    items: [blankItem()], note: '',
+  };
+}
+
+const state = { quotes: [], current: newDraft(), currentId: null, dirty: false, pane: 'form', search: '', names: {} };
+let db = null, user = null, downloads = null, myId = null;
+
+/* ---------- totals ---------- */
+const lineTotal = (it) => num(it.qty) * num(it.price);
+const supplyTotal = () => state.current.items.reduce((s, it) => s + lineTotal(it), 0);
+
+function nextNo(dateISO, excludeId) {
+  const prefix = slashDate(dateISO) + ' -';
+  let max = 0;
+  for (const q of state.quotes) {
+    if (q.id === excludeId || !q.data.no || !q.data.no.startsWith(prefix)) continue;
+    max = Math.max(max, parseInt(q.data.no.slice(prefix.length), 10) || 0);
+  }
+  return prefix + (max + 1);
+}
+function refreshAutoNo() {
+  if (state.current.noAuto) { state.current.no = nextNo(state.current.date, state.currentId); $('f-no').value = state.current.no; }
+}
+
+/* ---------- sheet ---------- */
+function renderSheet() {
+  const c = state.current, total = supplyTotal();
+  const sp = c.supplier || blankSupplier();
+  const L = (k, v, sp) => `<div class="lrow"><span class="lk${sp ? ' sp' : ''}">${k}</span><span class="lv">${esc(v)}</span></div>`;
+  const R = (k, v, sp, extra = '') => `<tr><td class="rk${sp ? ' sp' : ''}">${k}</td><td class="rv">${extra}${esc(v)}</td></tr>`;
+  const rows = c.items.map((it, i) => `<tr>
+      <td class="c">${i + 1}</td><td>${esc(it.name)}</td><td class="c">${esc(it.lpm)}</td><td class="c">${esc(it.head)}</td>
+      <td>${esc(it.spec)}</td><td class="c">${it.qty === '' ? '' : esc(num(it.qty).toLocaleString('ko-KR'))}</td>
+      <td class="r">${it.price === '' ? '' : won(num(it.price))}</td><td class="r">${it.price === '' ? '' : won(lineTotal(it))}</td><td>${esc(it.note)}</td></tr>`).join('');
+  $('sheet').innerHTML = `
+    <h1 class="sh-title">견적서</h1>
+    <div class="sh-rule"></div>
+    <div class="sh-top">
+      <div>
+        <div class="lrow"><span class="lk sp">수신</span><span class="lv client"><span>${esc(c.client)}</span><span>귀하</span></span></div>
+        ${L('담당자/TEL', c.contact)}${L('E-mail', c.email)}${L('견적번호', c.no)}${L('결제조건', c.payment)}
+        ${L('유효기간', c.validity)}${L('공 사 명', c.project)}${L('인도조건', c.delivery)}${L('납품일정', c.schedule)}
+      </div>
+      <table class="rtab">
+        ${R('상호', sp.name, true, safeImg(sp.seal) ? `<img class="seal" src="${safeImg(sp.seal)}" alt="">` : '')}
+        ${R('주소', sp.address, true)}${R('대표', sp.ceo, true)}${R('TEL/ FAX', sp.telfax)}
+        ${sp.cert ? `<tr class="cert"><td colspan="2">${esc(sp.cert)}</td></tr>` : ''}
+        ${R('H-Page', sp.web)}${R('담당자', c.staff)}${R('H.P/E-mail', c.staffContact)}${R('견적일자', slashDate(c.date))}
+      </table>
+    </div>
+    <div class="sh-amount"><span>공급가액 : ${hangulAmount(total)} 원정</span><span>(₩ ${won(total)}원) / VAT별도가</span></div>
+    <div class="sh-rule"></div>
+    <p class="sh-lead">아래와 같이 견적합니다.</p>
+    <table class="sh-items">
+      <colgroup><col style="width:7%"><col style="width:23%"><col style="width:7.5%"><col style="width:7%"><col style="width:17%"><col style="width:6%"><col style="width:10.5%"><col style="width:11%"><col style="width:11%"></colgroup>
+      <thead><tr><th>NO.</th><th>품목명[규격]</th><th>양수량<br>(LPM)</th><th>양정(M)</th><th>규격</th><th>수량</th><th>단가</th><th>합계</th><th>비고</th></tr></thead>
+      <tbody>${rows}<tr class="total"><td class="c" colspan="5">총합계</td><td></td><td></td><td class="r">${total ? won(total) : ''}</td><td></td></tr></tbody>
+    </table>
+    <div class="sh-note"><h3>특이사항</h3><div>${esc(c.note)}</div></div>
+    ${safeImg(sp.logo) ? `<img class="sh-logo" src="${safeImg(sp.logo)}" alt="">` : ''}`;
+  $('tSupply').textContent = won(total);
+  $('tVat').textContent = won(total * 0.1);
+  $('tGrand').textContent = won(total * 1.1);
+  $('docNo').textContent = c.no || '—';
+  fitSheet();
+}
+
+function fitSheet() {
+  const frame = $('sheetFrame'), sheet = $('sheet');
+  const w = frame.clientWidth; if (!w) return;
+  const s = Math.min(1, w / 794);
+  $('sheetScale').style.transform = `scale(${s})`;
+  frame.style.height = (sheet.offsetHeight * s) + 'px';
+  const pages = Math.max(1, Math.ceil((sheet.offsetHeight - 2) / 1123));
+  $('pageInfo').textContent = pages > 1 ? `${pages}쪽` : '';
+}
+new ResizeObserver(fitSheet).observe($('sheetFrame'));
+
+/* ---------- form ---------- */
+function fillForm() {
+  if (!state.current.supplier) state.current.supplier = loadSupplierDefaults();
+  const defs = loadSupplierDefaults();
+  for (const k of ['seal', 'logo']) if (!state.current.supplier[k]) state.current.supplier[k] = defs[k];
+  document.querySelectorAll('[data-f]').forEach(el => { el.value = state.current[el.dataset.f] ?? ''; });
+  fillSupplier();
+  renderItems();
+  renderSheet();
+  renderDocState();
+}
+
+function renderItems() {
+  $('itemRows').innerHTML = state.current.items.map((it, i) => `<tr data-i="${i}">
+    <td class="rowno">${i + 1}</td>
+    <td><input class="inp" id="it-${i}-name" data-k="name" list="dl-items" value="${esc(it.name)}" autocomplete="off" aria-label="${i + 1}번 품목명"></td>
+    <td><input class="inp num" id="it-${i}-lpm" data-k="lpm" value="${esc(it.lpm)}" inputmode="decimal" aria-label="양수량(LPM)" style="width:76px"></td>
+    <td><input class="inp num" id="it-${i}-head" data-k="head" value="${esc(it.head)}" inputmode="decimal" aria-label="양정(M)" style="width:64px"></td>
+    <td><input class="inp" id="it-${i}-spec" data-k="spec" value="${esc(it.spec)}" aria-label="규격"></td>
+    <td><input class="inp num" id="it-${i}-qty" data-k="qty" value="${esc(it.qty)}" inputmode="decimal" aria-label="수량" style="width:52px"></td>
+    <td><input class="inp num" id="it-${i}-price" data-k="price" value="${it.price === '' ? '' : won(num(it.price))}" inputmode="numeric" aria-label="단가" style="width:104px"></td>
+    <td class="linesum" id="it-${i}-sum">${won(lineTotal(it))}</td>
+    <td><input class="inp" id="it-${i}-note" data-k="note" value="${esc(it.note)}" aria-label="비고" style="width:80px"></td>
+    <td><button class="xbtn" data-del="${i}" aria-label="${i + 1}번 품목 삭제" ${state.current.items.length < 2 ? 'disabled' : ''}>×</button></td>
+  </tr>`).join('');
+}
+
+function markDirty() {
+  state.dirty = true;
+  renderDocState();
+  try { localStorage.setItem(DRAFT_KEY, JSON.stringify({ current: state.current, currentId: state.currentId })); } catch (e) {}
+}
+
+function renderDocState() {
+  const p = $('docStatePill');
+  if (state.dirty) { p.className = 'pill dirty'; p.textContent = state.currentId ? '수정 중 · 저장 안 됨' : '새 견적서 · 저장 안 됨'; }
+  else { p.className = 'pill'; p.textContent = state.currentId ? '저장됨' : '새 견적서'; }
+  $('btnDelete').hidden = !state.currentId;
+  $('btnSave').disabled = !db;
+  $('btnSave').title = db ? '' : '저장 기능을 쓸 수 없어요';
+}
+
+document.querySelectorAll('[data-f]').forEach(el => el.addEventListener('input', () => {
+  const f = el.dataset.f;
+  state.current[f] = el.value;
+  if (f === 'no') state.current.noAuto = el.value.trim() === '';
+  if (f === 'date') refreshAutoNo();
+  if (f === 'client') autofillClient(el.value);
+  renderSheet(); markDirty();
+}));
+
+$('itemRows').addEventListener('input', (e) => {
+  const inp = e.target.closest('input[data-k]'); if (!inp) return;
+  const i = +inp.closest('tr').dataset.i, k = inp.dataset.k;
+  let v = inp.value;
+  if (k === 'price') v = v.replace(/[^0-9]/g, '') === '' ? '' : num(v.replace(/,/g, ''));
+  state.current.items[i][k] = v;
+  if (k === 'name') autofillItem(i, inp.value);
+  $(`it-${i}-sum`).textContent = won(lineTotal(state.current.items[i]));
+  renderSheet(); markDirty();
+});
+$('itemRows').addEventListener('focusout', (e) => {
+  const inp = e.target.closest('input[data-k="price"]'); if (!inp) return;
+  const v = state.current.items[+inp.closest('tr').dataset.i].price;
+  inp.value = v === '' ? '' : won(num(v));
+});
+$('itemRows').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-del]'); if (!b) return;
+  state.current.items.splice(+b.dataset.del, 1);
+  renderItems(); renderSheet(); markDirty();
+});
+$('btnAddItem').addEventListener('click', () => {
+  state.current.items.push(blankItem());
+  renderItems(); renderSheet(); markDirty();
+  $(`it-${state.current.items.length - 1}-name`).focus();
+});
+
+/* past items & clients → autocomplete */
+function pastItems() {
+  const m = new Map();
+  for (const q of state.quotes) for (const it of (q.data.items || [])) if (it.name && !m.has(it.name)) m.set(it.name, it);
+  return m;
+}
+function pastClients() {
+  const m = new Map();
+  for (const q of state.quotes) if (q.data.client && !m.has(q.data.client)) m.set(q.data.client, q.data);
+  return m;
+}
+function autofillItem(i, name) {
+  const past = pastItems().get(name); if (!past) return;
+  const it = state.current.items[i];
+  for (const k of ['lpm', 'head', 'spec', 'price']) {
+    if ((it[k] === '' || it[k] == null) && past[k] !== '' && past[k] != null) {
+      it[k] = past[k];
+      const el = $(`it-${i}-${k}`); if (el) el.value = k === 'price' ? won(num(past[k])) : past[k];
+    }
+  }
+}
+function autofillClient(name) {
+  const past = pastClients().get(name); if (!past) return;
+  for (const k of ['contact', 'email', 'payment', 'delivery']) {
+    if (!state.current[k] && past[k]) { state.current[k] = past[k]; $('f-' + k).value = past[k]; }
+  }
+}
+function renderDatalists() {
+  const opt = (v) => `<option value="${esc(v)}"></option>`;
+  $('dl-items').innerHTML = [...pastItems().keys()].map(opt).join('');
+  $('dl-clients').innerHTML = [...pastClients().keys()].map(opt).join('');
+  const staff = new Set();
+  state.quotes.forEach(q => q.data.staff && staff.add(q.data.staff));
+  $('dl-staff').innerHTML = [...staff].map(opt).join('');
+}
+
+/* ---------- toasts & inline confirm ---------- */
+function toast(msg, kind) {
+  const t = document.createElement('div');
+  t.className = 'toast' + (kind === 'err' ? ' err' : '');
+  t.textContent = msg;
+  $('toasts').appendChild(t);
+  setTimeout(() => t.remove(), kind === 'err' ? 6000 : 3000);
+}
+function confirmBar(msg, okLabel, onOk) {
+  $('toasts').querySelectorAll('.confirm').forEach(x => x.remove());
+  const t = document.createElement('div');
+  t.className = 'toast confirm';
+  const s = document.createElement('span'); s.textContent = msg; t.appendChild(s);
+  const ok = document.createElement('button'); ok.className = 'btn primary'; ok.textContent = okLabel;
+  const no = document.createElement('button'); no.className = 'btn ghost'; no.textContent = '취소';
+  ok.onclick = () => { t.remove(); onOk(); };
+  no.onclick = () => t.remove();
+  t.append(ok, no);
+  $('toasts').appendChild(t);
+  ok.focus();
+}
+function guardDirty(fn) {
+  if (state.dirty) confirmBar('저장하지 않은 내용이 있어요. 그래도 넘어갈까요?', '넘어가기', fn); else fn();
+}
+
+/* ---------- actions ---------- */
+function loadQuote(id) {
+  const q = state.quotes.find(x => x.id === id); if (!q) return;
+  state.current = JSON.parse(JSON.stringify(q.data));
+  if (!Array.isArray(state.current.items) || !state.current.items.length) state.current.items = [blankItem()];
+  state.currentId = id; state.dirty = false;
+  try { localStorage.removeItem(DRAFT_KEY); } catch (e) {}
+  fillForm(); showView('edit');
+}
+function startNew() {
+  state.current = newDraft(); state.currentId = null; state.dirty = false;
+  try { localStorage.removeItem(DRAFT_KEY); } catch (e) {}
+  refreshAutoNo(); fillForm(); showView('edit');
+}
+$('btnNew').onclick = () => guardDirty(startNew);
+$('btnCopy').onclick = () => {
+  const copy = JSON.parse(JSON.stringify(state.current));
+  delete copy.createdAt; delete copy.createdBy; delete copy.updatedAt; delete copy.updatedBy;
+  copy.date = todayISO(); copy.noAuto = true;
+  state.current = copy; state.currentId = null;
+  refreshAutoNo(); fillForm(); markDirty();
+  toast('복제했어요. 내용을 고친 뒤 저장하면 새 견적서로 남아요.');
+};
+
+$('btnSave').onclick = async () => {
+  if (!db) return;
+  const btn = $('btnSave'); btn.disabled = true;
+  try {
+    const now = Date.now();
+    if (!state.currentId && state.current.noAuto) refreshAutoNo();
+    const data = JSON.parse(JSON.stringify(state.current));
+    data.items = data.items.map(it => ({ ...it, qty: it.qty === '' ? '' : num(it.qty), price: it.price === '' ? '' : num(it.price) }));
+    data.total = supplyTotal();
+    data.updatedAt = now; data.updatedBy = myId;
+    let ref;
+    if (state.currentId) ref = db.doc('quotes/' + state.currentId);
+    else { ref = db.collection('quotes').doc(); data.createdAt = now; data.createdBy = myId; }
+    await ref.set(data);
+    state.current = data; state.currentId = ref.id; state.dirty = false;
+    try { localStorage.removeItem(DRAFT_KEY); } catch (e) {}
+    renderDocState();
+    toast(`견적서 ${data.no}을(를) 이 브라우저에 저장했어요.`);
+  } catch (e) {
+    toast(e && (e.code === 'quota_exceeded' || e.name === 'QuotaExceededError') ? '저장 공간이 가득 찼어요. 오래된 견적서를 지운 뒤 다시 저장해 주세요.' : '저장하지 못했어요. 다시 눌러 주세요.', 'err');
+  } finally { btn.disabled = !db; }
+};
+
+$('btnDelete').onclick = () => {
+  const id = state.currentId; if (!id || !db) return;
+  confirmBar(`견적서 ${state.current.no}을(를) 삭제할까요? 되돌릴 수 없어요.`, '삭제', async () => {
+    try { await db.doc('quotes/' + id).delete(); state.dirty = false; startNew(); toast('삭제했어요.'); }
+    catch (e) { toast('삭제하지 못했어요. 다시 눌러 주세요.', 'err'); }
+  });
+};
+
+/* ---------- PDF ---------- */
+async function makePdfBlob() {
+  if (document.fonts && document.fonts.ready) await document.fonts.ready;
+  const canvas = await html2canvas($('sheet'), {
+    scale: 3, backgroundColor: '#ffffff', useCORS: true, logging: false, windowWidth: 1400, windowHeight: 2000,
+    onclone: (doc) => {
+      const sc = doc.getElementById('sheetScale'); if (sc) sc.style.transform = 'none';
+      const fr = doc.getElementById('sheetFrame'); if (fr) { fr.style.height = 'auto'; fr.style.overflow = 'visible'; fr.style.width = '794px'; }
+      const ed = doc.getElementById('editor'); if (ed) ed.setAttribute('data-pane', 'preview');
+      const pc = doc.querySelector('.previewcol'); if (pc) pc.style.position = 'static';
+    },
+  });
+  const { jsPDF } = window.jspdf;
+  const pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait', compress: true });
+  const pw = 210, ph = 297, pxPerMm = canvas.width / pw, pageH = Math.floor(ph * pxPerMm);
+  let page = 0;
+  for (let y = 0; y < canvas.height; y += pageH) {
+    const h = Math.min(pageH, canvas.height - y);
+    if (page > 0 && h < pageH * 0.02) break;
+    const c = document.createElement('canvas'); c.width = canvas.width; c.height = h;
+    const ctx = c.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, c.width, h);
+    ctx.drawImage(canvas, 0, y, canvas.width, h, 0, 0, canvas.width, h);
+    if (page > 0) pdf.addPage();
+    pdf.addImage(c.toDataURL('image/jpeg', 0.92), 'JPEG', 0, 0, pw, h / pxPerMm);
+    page++;
+  }
+  return pdf.output('blob');
+}
+$('btnPdf').onclick = async () => {
+  if (!downloads) return;
+  const btn = $('btnPdf'); btn.disabled = true;
+  try {
+    if (!window.html2canvas || !window.jspdf) throw { code: 'lib' };
+    const blob = await makePdfBlob();
+    const c = state.current;
+    const filename = `견적서_${(c.client || '수신처미정').replace(/[\\/:*?"<>|]/g, '')}_${(c.no || slashDate(c.date)).replace(/[\/\s]/g, '')}.pdf`;
+    await downloads.save({ filename, data: blob });
+    toast('PDF를 저장했어요.');
+  } catch (e) {
+    const code = e && e.code;
+    if (code === 'declined') {}
+    else if (code === 'rate_limited') toast('이미 저장 창이 열려 있어요. 그 창을 먼저 닫아 주세요.', 'err');
+    else if (code === 'lib') toast('PDF 도구를 불러오지 못했어요. 페이지를 새로고침한 뒤 다시 눌러 주세요.', 'err');
+    else toast('PDF를 만들지 못했어요. 잠시 후 다시 눌러 주세요.', 'err');
+  } finally { btn.disabled = !downloads; }
+};
+
+/* ---------- views ---------- */
+function showView(v) {
+  $('viewEdit').hidden = v !== 'edit';
+  $('viewList').hidden = v !== 'list';
+  $('tabEdit').setAttribute('aria-selected', v === 'edit');
+  $('tabList').setAttribute('aria-selected', v === 'list');
+  if (v === 'edit') fitSheet(); else renderList();
+}
+$('tabEdit').onclick = () => showView('edit');
+$('tabList').onclick = () => showView('list');
+function setPane(p) {
+  $('editor').dataset.pane = p;
+  $('segForm').setAttribute('aria-pressed', p === 'form');
+  $('segPreview').setAttribute('aria-pressed', p === 'preview');
+  fitSheet();
+}
+$('segForm').onclick = () => setPane('form');
+$('segPreview').onclick = () => setPane('preview');
+
+const fmtTime = (t) => { if (!t) return ''; const d = new Date(t); return `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; };
+function renderList() {
+  $('quoteCount').textContent = state.quotes.length;
+  const q = state.search.trim().toLowerCase();
+  const rows = state.quotes.filter(x => !q || [x.data.client, x.data.project, x.data.no].some(v => String(v || '').toLowerCase().includes(q)));
+  const empty = $('listEmpty');
+  if (!db) { empty.hidden = false; empty.innerHTML = '<b>저장 기능을 쓸 수 없어요</b>브라우저 설정에서 사이트 데이터 저장이 막혀 있는지 확인해 주세요.'; $('listRows').innerHTML = ''; return; }
+  if (!rows.length) {
+    empty.hidden = false;
+    empty.innerHTML = state.quotes.length ? '<b>검색 결과가 없어요</b>거래처명, 공사명, 견적번호로 찾아보세요.' : '<b>아직 저장된 견적서가 없어요</b>작성 탭에서 견적서를 만들고 저장을 누르면 여기에 쌓여요. 이 브라우저에만 저장되니, 중요한 견적서는 PDF로도 받아 두세요.';
+    $('listRows').innerHTML = ''; return;
+  }
+  empty.hidden = true;
+  $('listRows').innerHTML = rows.map(x => {
+    const d = x.data, who = state.names[d.updatedBy] || '';
+    return `<tr data-id="${esc(x.id)}" tabindex="0">
+      <td class="mono">${esc(d.no)}</td>
+      <td>${esc(d.client) || '<span class="sub">수신처 미정</span>'}<div class="sub">${esc(d.contact)}</div></td>
+      <td>${esc(d.project)}</td>
+      <td class="mono r">${won(d.total || 0)}</td>
+      <td>${esc((d.staff || '').split('/')[0])}</td>
+      <td><span class="mono">${fmtTime(d.updatedAt)}</span><div class="sub">${esc(who)}</div></td></tr>`;
+  }).join('');
+}
+$('listRows').addEventListener('click', (e) => { const tr = e.target.closest('tr[data-id]'); if (tr) guardDirty(() => loadQuote(tr.dataset.id)); });
+$('listRows').addEventListener('keydown', (e) => { if (e.key === 'Enter') { const tr = e.target.closest('tr[data-id]'); if (tr) guardDirty(() => loadQuote(tr.dataset.id)); } });
+$('f-search').addEventListener('input', (e) => { state.search = e.target.value; renderList(); });
+
+/* ---------- supplier form ---------- */
+function fillSupplier() {
+  const sp = state.current.supplier;
+  document.querySelectorAll('[data-s]').forEach(el => { el.value = sp[el.dataset.s] ?? ''; });
+  for (const k of ['seal', 'logo']) {
+    const u = safeImg(sp[k]), img = $(`s-${k}-prev`);
+    img.hidden = !u; if (u) img.src = u; else img.removeAttribute('src');
+    $(`s-${k}-del`).hidden = !u;
+  }
+}
+document.querySelectorAll('[data-s]').forEach(el => el.addEventListener('input', () => {
+  state.current.supplier[el.dataset.s] = el.value;
+  saveSupplierDefaults(state.current.supplier);
+  renderSheet(); markDirty();
+}));
+function readImage(file, maxW, maxH) {
+  return new Promise((resolve, reject) => {
+    const fr = new FileReader();
+    fr.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        const sc = Math.min(1, maxW / img.width, maxH / img.height);
+        const cv = document.createElement('canvas');
+        cv.width = Math.max(1, Math.round(img.width * sc)); cv.height = Math.max(1, Math.round(img.height * sc));
+        cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
+        resolve(cv.toDataURL('image/png'));
+      };
+      img.onerror = reject; img.src = fr.result;
+    };
+    fr.onerror = reject; fr.readAsDataURL(file);
+  });
+}
+document.querySelectorAll('[data-img]').forEach(inp => inp.addEventListener('change', async () => {
+  const f = inp.files[0], k = inp.dataset.img; inp.value = '';
+  if (!f) return;
+  try {
+    state.current.supplier[k] = await readImage(f, k === 'seal' ? 180 : 520, k === 'seal' ? 180 : 160);
+    saveSupplierDefaults(state.current.supplier);
+    fillSupplier(); renderSheet(); markDirty();
+  } catch (e) { toast('이미지를 읽지 못했어요. PNG나 JPG 파일인지 확인해 주세요.', 'err'); }
+}));
+document.querySelectorAll('[data-imgdel]').forEach(b => b.addEventListener('click', () => {
+  state.current.supplier[b.dataset.imgdel] = '';
+  saveSupplierDefaults(state.current.supplier);
+  fillSupplier(); renderSheet(); markDirty();
+}));
+
+/* ---------- sidebar ---------- */
+$('modList').innerHTML = MODULES.map((m, i) => `<li><button class="mod-btn" data-mod="${m.id}" ${i === 0 ? 'aria-current="page"' : ''}>${m.icon}<span>${esc(m.name)}</span></button></li>`).join('');
+function setSync(kind, text) { $('syncState').innerHTML = `<span class="dot ${kind}"></span>${esc(text)}`; }
+
+async function resolveNames() {
+  if (!user) return;
+  const ids = [...new Set(state.quotes.map(q => q.data.updatedBy).filter(Boolean))];
+  if (!ids.length) return;
+  try { const ps = await user.profiles(ids); ids.forEach(id => { state.names[id] = (ps[id] && ps[id].name) || ''; }); if (!$('viewList').hidden) renderList(); } catch (e) {}
+}
+
+/* ================= 온라인 마감 대조 module ================= */
+const SPEC = {
+  erp: { fields: [
+    { k: 'key', name: '주문번호가 있는 열', req: true, kw: ['주문번호', '적요', '비고'] },
+    { k: 'amount', name: '비교할 금액 열', req: true, kw: ['합계', '합계금액', '판매금액', '금액', '공급가액'] },
+    { k: 'date', name: '일자 열', kw: ['일자-No.', '일자', '전표일자', '날짜'] },
+    { k: 'client', name: '거래처 열', kw: ['거래처명', '거래처'] },
+  ] },
+  cp: { fields: [
+    { k: 'key', name: '주문번호 열', req: true, kw: ['주문번호', 'orderid'] },
+    { k: 'amount', name: '비교할 금액 열', req: true, kw: ['판매액', '판매금액', '결제금액', '매출금액', '매출액', '금액'] },
+    { k: 'date', name: '일자 열', kw: ['매출인식일', '정산일', '결제일', '주문일', '일자'] },
+  ] },
+};
+const ST = { diff: ['금액 다름', 'bad'], erpOnly: ['이카운트에만', 'erp'], cpOnly: ['쿠팡에만', 'cp'], match: ['일치', 'ok'] };
+const C = { erp: null, cp: null, example: false, filter: 'all', q: '', result: null };
+const TOTAL_RE = /^(총\s*합\s*계|합\s*계|소\s*계|총\s*계|계)$/;
+const norm = (s) => String(s ?? '').replace(/\s+/g, '').toLowerCase();
+const colLetter = (i) => { let s = ''; i++; while (i > 0) { const m = (i - 1) % 26; s = String.fromCharCode(65 + m) + s; i = Math.floor((i - 1) / 26); } return s; };
+const fmtDate = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+const cellText = (v) => v instanceof Date ? fmtDate(v) : String(v ?? '').trim();
+const sgn = (n) => { n = Math.round(n); return (n > 0 ? '+' : n < 0 ? '−' : '') + won(Math.abs(n)); };
+
+function findCol(headers, kws) {
+  const H = headers.map(norm);
+  for (const kw of kws) { const i = H.indexOf(norm(kw)); if (i >= 0) return i; }
+  for (const kw of kws) { const i = H.findIndex(h => h && h.includes(norm(kw))); if (i >= 0) return i; }
+  return -1;
+}
+function detectHeaderRow(aoa, side) {
+  const kws = SPEC[side].fields.flatMap(f => f.kw).map(norm);
+  const lim = Math.min(aoa.length, 25);
+  let best = -1, bestScore = 0;
+  for (let r = 0; r < lim; r++) {
+    const score = (aoa[r] || []).filter(c => typeof c === 'string' && c.trim() && kws.some(k => norm(c) === k || norm(c).includes(k))).length;
+    if (score > bestScore) { bestScore = score; best = r; }
+  }
+  if (best < 0) {
+    let mx = 0;
+    for (let r = 0; r < lim; r++) { const n = (aoa[r] || []).filter(c => c !== '' && c != null).length; if (n > mx) { mx = n; best = r; } }
+  }
+  return Math.max(0, best);
+}
+function setTable(side, aoa) {
+  const S = C[side];
+  const hr = detectHeaderRow(aoa, side);
+  const width = Math.max(0, ...aoa.slice(hr, hr + 60).map(r => r.length));
+  S.headers = Array.from({ length: width }, (_, i) => cellText(aoa[hr] && aoa[hr][i]));
+  S.rows = aoa.slice(hr + 1).filter(r => r.some(c => c !== '' && c != null));
+  S.map = {};
+  for (const f of SPEC[side].fields) S.map[f.k] = findCol(S.headers, f.kw);
+}
+function loadSheet(side, name) {
+  const S = C[side];
+  S.sheetName = name;
+  setTable(side, XLSX.utils.sheet_to_json(S.wb.Sheets[name], { header: 1, raw: true, defval: '' }));
+}
+async function handleFile(side, file) {
+  if (!file) return;
+  if (!window.XLSX) { toast('엑셀 도구를 불러오지 못했어요. 페이지를 새로고침한 뒤 다시 올려 주세요.', 'err'); return; }
+  try {
+    const wb = XLSX.read(await file.arrayBuffer(), { type: 'array', cellDates: true });
+    if (C.example) { C.example = false; C.erp = null; C.cp = null; }
+    C[side] = { fileName: file.name, wb, sheetNames: wb.SheetNames };
+    const first = wb.SheetNames.find(n => { const ref = wb.Sheets[n]['!ref']; return ref && ref !== 'A1'; }) || wb.SheetNames[0];
+    loadSheet(side, first);
+    if (!C[side].rows.length) toast(`${file.name}에서 읽을 행을 찾지 못했어요. 다른 시트를 골라 보세요.`, 'err');
+  } catch (e) {
+    toast(`${file.name}을(를) 읽지 못했어요. 엑셀(.xlsx, .xls)이나 CSV 파일인지 확인해 주세요.`, 'err');
+  }
+  renderClosing();
+}
+
+function extractKey(v) {
+  if (v === '' || v == null) return '';
+  if (typeof v === 'number') return Number.isInteger(v) && Math.abs(v) >= 1e5 ? v.toFixed(0) : '';
+  const s = String(v), m = s.match(/\d{8,}/);
+  if (m) return m[0];
+  const t = s.trim();
+  return /^[A-Za-z0-9-]{6,}$/.test(t) ? t : '';
+}
+function amountOf(v) {
+  if (typeof v === 'number') return v;
+  const s = String(v ?? '').trim();
+  if (!s) return 0;
+  const n = num(s.replace(/[()]/g, ''));
+  return /^\(.*\)$/.test(s) ? -Math.abs(n) : n;
+}
+function collect(side) {
+  const S = C[side], m = S.map;
+  const out = { byKey: new Map(), noKey: [], total: 0, skipped: 0 };
+  const filt = side === 'erp' ? $('c-filter').value.trim() : '';
+  for (const r of S.rows) {
+    const key = extractKey(r[m.key]);
+    if (!key && r.some(c => typeof c === 'string' && TOTAL_RE.test(c.trim()))) continue;
+    if (side === 'erp' && filt && m.client >= 0 && !cellText(r[m.client]).includes(filt)) { out.skipped++; continue; }
+    const amt = m.amount >= 0 ? amountOf(r[m.amount]) : 0;
+    const date = m.date >= 0 ? cellText(r[m.date]) : '';
+    const rowText = r.map(cellText).filter(Boolean).join(' · ');
+    const cm = rowText.match(/★\s*\d{1,2}\s*월\s*이월/);
+    if (!key) { out.noKey.push({ amt, date, text: rowText.slice(0, 140), row: r }); out.total += amt; continue; }
+    out.total += amt;
+    let g = out.byKey.get(key);
+    if (!g) { g = { amt: 0, n: 0, dates: new Set(), carry: '' }; out.byKey.set(key, g); }
+    g.amt += amt; g.n++;
+    if (date) g.dates.add(date);
+    if (cm) g.carry = cm[0].replace(/\s/g, '');
+  }
+  return out;
+}
+function compare() {
+  for (const s of ['erp', 'cp']) if (C[s].map.key < 0 || C[s].map.amount < 0) return { needMap: true };
+  const tol = Math.abs(num($('c-tol').value));
+  const E = collect('erp'), P = collect('cp');
+  const rows = [];
+  for (const k of new Set([...E.byKey.keys(), ...P.byKey.keys()])) {
+    const e = E.byKey.get(k), p = P.byKey.get(k);
+    const diff = (e ? e.amt : 0) - (p ? p.amt : 0);
+    const status = e && p ? (Math.abs(diff) <= tol ? 'match' : 'diff') : e ? 'erpOnly' : 'cpOnly';
+    rows.push({ key: k, ea: e ? e.amt : null, pa: p ? p.amt : null, diff, status,
+      ed: e ? [...e.dates].join(', ') : '', pd: p ? [...p.dates].join(', ') : '', carry: e ? e.carry : '', en: e ? e.n : 0, pn: p ? p.n : 0 });
+  }
+  const ord = { diff: 0, erpOnly: 1, cpOnly: 2, match: 3 };
+  rows.sort((a, b) => ord[a.status] - ord[b.status] || Math.abs(b.diff) - Math.abs(a.diff));
+  const sumBy = (s) => rows.filter(r => r.status === s).reduce((t, r) => t + r.diff, 0);
+  const counts = {};
+  for (const s of Object.keys(ST)) counts[s] = rows.filter(r => r.status === s).length;
+  const erpNoKey = E.noKey.reduce((t, x) => t + x.amt, 0), cpNoKey = P.noKey.reduce((t, x) => t + x.amt, 0);
+  return {
+    rows, counts, tol, erpTotal: E.total, cpTotal: P.total, delta: E.total - P.total,
+    erpOrders: E.byKey.size, cpOrders: P.byKey.size, erpSkipped: E.skipped,
+    erpNoKey: E.noKey, cpNoKey: P.noKey,
+    parts: [
+      ['금액이 다른 주문', sumBy('diff')],
+      ['이카운트에만 있는 주문', sumBy('erpOnly')],
+      ['쿠팡에만 있는 주문', sumBy('cpOnly')],
+      ['허용 범위 안의 작은 차이', sumBy('match')],
+      ['주문번호가 없는 이카운트 전표', erpNoKey],
+      ['주문번호가 없는 쿠팡 행', -cpNoKey],
+    ].filter(p => Math.round(p[1]) !== 0),
+  };
+}
+
+/* ---------- rendering ---------- */
+function renderUpCard(side) {
+  const S = C[side], drop = $('drop-' + side), mp = $('map-' + side);
+  if (!S) {
+    drop.classList.remove('loaded');
+    $(`drop-${side}-title`).textContent = '엑셀 파일을 끌어다 놓거나 눌러서 선택';
+    $(`drop-${side}-sub`).textContent = '.xlsx · .xls · .csv';
+    mp.hidden = true; mp.innerHTML = '';
+    return;
+  }
+  drop.classList.add('loaded');
+  $(`drop-${side}-title`).innerHTML = esc(S.fileName) + (S.example ? '<span class="exchip">예시</span>' : '');
+  $(`drop-${side}-sub`).textContent = `${S.rows.length.toLocaleString('ko-KR')}행 읽음 · 다른 파일로 바꾸려면 누르세요`;
+  mp.hidden = false;
+  const opts = (sel, optional) =>
+    (optional ? `<option value="-1"${sel < 0 ? ' selected' : ''}>사용 안 함</option>` : (sel < 0 ? '<option value="-1" selected>열을 골라 주세요</option>' : '')) +
+    S.headers.map((h, i) => `<option value="${i}"${i === sel ? ' selected' : ''}>${colLetter(i)} · ${esc(h || '(제목 없음)')}</option>`).join('');
+  let html = '';
+  if (S.sheetNames && S.sheetNames.length > 1)
+    html += `<div class="field"><label for="${side}-sheet">시트</label><select class="inp" id="${side}-sheet" data-sheet="1">${S.sheetNames.map(n => `<option${n === S.sheetName ? ' selected' : ''}>${esc(n)}</option>`).join('')}</select></div>`;
+  for (const f of SPEC[side].fields)
+    html += `<div class="field"><label for="${side}-map-${f.k}">${f.name}${f.req ? '' : ' (선택)'}</label><select class="inp${f.req && S.map[f.k] < 0 ? ' warn' : ''}" id="${side}-map-${f.k}" data-k="${f.k}">${opts(S.map[f.k], !f.req)}</select></div>`;
+  mp.innerHTML = `<div class="mapgrid">${html}</div>`;
+}
+function renderClosing() { renderUpCard('erp'); renderUpCard('cp'); renderResult(); }
+
+function renderResult() {
+  const box = $('c-result');
+  C.result = null;
+  if (!C.erp || !C.cp) {
+    const left = !C.erp && !C.cp ? '이카운트 판매전표와 쿠팡 정산내역 엑셀을' : `남은 ${!C.erp ? '이카운트 판매전표' : '쿠팡 정산내역'} 엑셀을`;
+    box.innerHTML = `<div class="card cempty"><b>두 파일을 모두 올리면 결과가 여기에 나와요</b><p>${left} 올려 주세요. 주문번호로 묶어서 양쪽 금액을 비교해요.</p><button class="btn" id="c-example">예시로 먼저 보기</button></div>`;
+    return updateExportBtn();
+  }
+  const R = compare();
+  if (R.needMap) {
+    box.innerHTML = '<div class="card cempty"><b>열을 골라 주세요</b><p>주문번호 열이나 금액 열을 자동으로 찾지 못했어요. 위 카드에서 빨갛게 표시된 칸을 직접 골라 주시면 바로 비교해요.</p></div>';
+    return updateExportBtn();
+  }
+  C.result = R;
+  const [yy, mm] = ($('c-month').value || '-').split('-');
+  const d = Math.round(R.delta);
+  const chip = (k, label, n) => `<button class="chip" data-filter="${k}" aria-pressed="${C.filter === k}">${label}<i>${n}</i></button>`;
+  box.innerHTML = `
+    <div class="rhead"><h2>${yy ? `${yy}년 ${+mm}월 ` : ''}쿠팡 정산 대조 결과</h2><button class="btn primary" id="c-export">결과 엑셀 받기</button></div>
+    ${C.example ? '<div class="exbanner">예시 데이터로 만든 결과예요. 위에 실제 엑셀 두 개를 올리면 바로 바뀌어요.</div>' : ''}
+    <div class="ctiles">
+      <div class="ctile"><span>이카운트 판매전표 합계</span><b>${won(R.erpTotal)}</b><small>주문 ${R.erpOrders}건${R.erpSkipped ? ` · 거래처 필터로 ${R.erpSkipped}행 제외` : ''}</small></div>
+      <div class="ctile"><span>쿠팡 정산 합계</span><b>${won(R.cpTotal)}</b><small>주문 ${R.cpOrders}건</small></div>
+      <div class="ctile delta ${d === 0 ? 'ok' : 'bad'}"><span>차액 (이카운트 − 쿠팡)</span><b>${d === 0 ? '0' : sgn(d)}</b><small>${d === 0 ? '두 합계가 같아요' : '아래에서 차액이 생긴 곳을 확인하세요'}</small></div>
+    </div>
+    ${R.parts.length ? `<div class="card breakdown"><h3>차액이 생긴 곳</h3><table>
+      ${R.parts.map(p => `<tr><td>${p[0]}</td><td class="n">${sgn(p[1])}</td></tr>`).join('')}
+      <tr class="sum"><td>합계</td><td class="n">${sgn(R.delta)}</td></tr></table></div>` : ''}
+    <div class="rtools">
+      <div class="chips">${chip('all', '전체', R.rows.length)}${Object.keys(ST).map(k => chip(k, ST[k][0], R.counts[k])).join('')}</div>
+      <input class="inp" id="c-search" type="search" placeholder="주문번호 검색" value="${esc(C.q)}">
+    </div>
+    <div class="tablewrap"><table class="qlist ctable">
+      <thead><tr><th>상태</th><th>주문번호</th><th class="r">이카운트</th><th class="r">쿠팡</th><th class="r">차이</th><th>이카운트 일자</th><th>쿠팡 일자</th></tr></thead>
+      <tbody id="c-rows"></tbody></table><div id="c-more"></div></div>
+    ${R.erpNoKey.length ? `<details class="card"><summary>주문번호를 찾지 못한 이카운트 전표 ${R.erpNoKey.length}건 · ${sgn(R.erpNoKey.reduce((t, x) => t + x.amt, 0))}</summary>
+      <ul>${R.erpNoKey.slice(0, 100).map(x => `<li><b>${won(x.amt)}</b>${esc(x.text)}</li>`).join('')}</ul></details>` : ''}
+    ${R.cpNoKey.length ? `<details class="card"><summary>주문번호를 찾지 못한 쿠팡 행 ${R.cpNoKey.length}건 · ${sgn(R.cpNoKey.reduce((t, x) => t + x.amt, 0))}</summary>
+      <ul>${R.cpNoKey.slice(0, 100).map(x => `<li><b>${won(x.amt)}</b>${esc(x.text)}</li>`).join('')}</ul></details>` : ''}`;
+  renderCRows();
+  updateExportBtn();
+}
+function renderCRows() {
+  const R = C.result; if (!R || !$('c-rows')) return;
+  const q = C.q.replace(/\s/g, '');
+  const rows = R.rows.filter(r => (C.filter === 'all' || r.status === C.filter) && (!q || r.key.includes(q)));
+  const cell = (v, n) => v == null ? '<td class="r dim">없음</td>' : `<td class="mono r">${won(v)}${n > 1 ? ` <span class="dim">(${n}행)</span>` : ''}</td>`;
+  $('c-rows').innerHTML = rows.slice(0, 500).map(r => `<tr>
+    <td><span class="st ${ST[r.status][1]}">${ST[r.status][0]}</span></td>
+    <td class="mono">${esc(r.key)}${r.carry ? `<span class="carry">${esc(r.carry)}</span>` : ''}</td>
+    ${cell(r.ea, r.en)}${cell(r.pa, r.pn)}
+    <td class="mono r${Math.round(r.diff) !== 0 ? ' neg' : ' dim'}">${Math.round(r.diff) === 0 ? '0' : sgn(r.diff)}</td>
+    <td class="mono">${esc(r.ed)}</td><td class="mono">${esc(r.pd)}</td></tr>`).join('') ||
+    '<tr><td colspan="7" class="dim">조건에 맞는 주문이 없어요.</td></tr>';
+  $('c-more').innerHTML = rows.length > 500 ? `<div class="more">처음 500건만 보여요. 전체 ${rows.length.toLocaleString('ko-KR')}건은 결과 엑셀에서 확인하세요.</div>` : '';
+  document.querySelectorAll('#c-result .chip').forEach(b => b.setAttribute('aria-pressed', b.dataset.filter === C.filter));
+}
+function updateExportBtn() {
+  const b = $('c-export'); if (!b) return;
+  b.disabled = !downloads || !C.result;
+  b.title = downloads ? '' : '이 화면에서는 파일 저장을 쓸 수 없어요';
+}
+
+async function exportResult() {
+  const R = C.result; if (!R || !downloads || !window.XLSX) return;
+  const btn = $('c-export'); btn.disabled = true;
+  try {
+    const [, mm] = ($('c-month').value || '-').split('-');
+    const wb = XLSX.utils.book_new();
+    const sum = [
+      ...(C.example ? [['※ 예시 데이터로 만든 결과입니다'], []] : []),
+      ['항목', '금액'], ['이카운트 판매전표 합계', Math.round(R.erpTotal)], ['쿠팡 정산 합계', Math.round(R.cpTotal)], ['차액 (이카운트 - 쿠팡)', Math.round(R.delta)], [],
+      ['차액이 생긴 곳', '금액'], ...R.parts.map(p => [p[0], Math.round(p[1])]), [],
+      ['상태', '주문 수'], ...Object.keys(ST).map(k => [ST[k][0], R.counts[k]]), [],
+      ['이카운트 파일', C.erp.fileName], ['쿠팡 파일', C.cp.fileName], ['이카운트 거래처 필터', $('c-filter').value.trim() || '전체'], ['금액 차이 허용(원)', R.tol],
+    ];
+    const ws1 = XLSX.utils.aoa_to_sheet(sum); ws1['!cols'] = [{ wch: 30 }, { wch: 18 }];
+    XLSX.utils.book_append_sheet(wb, ws1, '요약');
+    const det = [['상태', '주문번호', '이카운트 금액', '쿠팡 금액', '차이(이카운트-쿠팡)', '이카운트 일자', '쿠팡 일자', '이월 표시'],
+      ...R.rows.map(r => [ST[r.status][0], r.key, r.ea ?? '', r.pa ?? '', Math.round(r.diff), r.ed, r.pd, r.carry])];
+    const ws2 = XLSX.utils.aoa_to_sheet(det);
+    ws2['!cols'] = [{ wch: 12 }, { wch: 20 }, { wch: 14 }, { wch: 14 }, { wch: 18 }, { wch: 18 }, { wch: 14 }, { wch: 12 }];
+    XLSX.utils.book_append_sheet(wb, ws2, '대조결과');
+    const fix = (c) => c instanceof Date ? fmtDate(c) : c;
+    if (R.erpNoKey.length) XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([C.erp.headers, ...R.erpNoKey.map(x => x.row.map(fix))]), '이카운트_주문번호없음');
+    if (R.cpNoKey.length) XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([C.cp.headers, ...R.cpNoKey.map(x => x.row.map(fix))]), '쿠팡_주문번호없음');
+    const buf = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+    await downloads.save({ filename: `쿠팡_${mm ? +mm + '월_' : ''}정산대조${C.example ? '_예시' : ''}.xlsx`, data: new Blob([buf]) });
+    toast('결과 엑셀을 저장했어요.');
+  } catch (e) {
+    const code = e && e.code;
+    if (code === 'declined') {}
+    else if (code === 'rate_limited') toast('이미 저장 창이 열려 있어요. 그 창을 먼저 닫아 주세요.', 'err');
+    else toast('결과 엑셀을 만들지 못했어요. 잠시 후 다시 눌러 주세요.', 'err');
+  } finally { updateExportBtn(); }
+}
+
+/* ---------- example data (clearly marked) ---------- */
+function loadExample() {
+  C.example = true; C.filter = 'all'; C.q = '';
+  C.erp = { example: true, fileName: '예시_이카운트_판매현황.xlsx' };
+  C.cp = { example: true, fileName: '예시_쿠팡_정산내역.xlsx' };
+  setTable('erp', [
+    ['판매현황 (예시)'], [],
+    ['일자-No.', '거래처명', '품목명(규격)', '수량', '합계', '적요'],
+    ['2026/10/01 -4', '쿠팡(주)', '가정용 가압펌프 PH-125', 1, 189000, '쿠팡 2100045799012 ★10월이월'],
+    ['2026/10/02 -1', '쿠팡(주)', '가정용 가압펌프 PH-125', 1, 189000, '쿠팡 2100045871203'],
+    ['2026/10/02 -2', '쿠팡(주)', '배수 펌프 DP-400', 2, 256000, '쿠팡 2100045871219'],
+    ['2026/10/05 -1', '쿠팡(주)', '가정용 가압펌프 PH-125', 1, 189000, '쿠팡 2100045902331'],
+    ['2026/10/09 -3', '쿠팡(주)', '압력탱크 24L', 1, 98000, '쿠팡 2100046011874'],
+    ['2026/10/14 -1', '쿠팡(주)', '배수 펌프 DP-400', 1, 128000, '쿠팡 2100046120057'],
+    ['2026/10/18 -1', '스마트스토어', '배수 펌프 DP-400', 1, 128000, '스토어 20261018-552'],
+    ['2026/10/21 -2', '쿠팡(주)', '호스 커플러 세트', 3, 45000, '쿠팡 2100046233190'],
+    ['2026/10/28 -1', '쿠팡(주)', '반품 택배비', 1, 12000, '10월 반품 택배비'],
+    ['합계', '', '', 12, 1234000, ''],
+  ]);
+  setTable('cp', [
+    ['주문번호', '매출인식일', '상품명', '판매액', '판매수수료', '정산대상액'],
+    ['2100045871203', '2026-10-03', '가정용 가압펌프 PH-125', 189000, -20412, 168588],
+    ['2100045871219', '2026-10-03', '배수 펌프 DP-400', 256000, -27648, 228352],
+    ['2100045902331', '2026-10-06', '가정용 가압펌프 PH-125', 179000, -19332, 159668],
+    ['2100046011874', '2026-10-10', '압력탱크 24L', 98000, -10584, 87416],
+    ['2100046120057', '2026-10-15', '배수 펌프 DP-400', 128000, -13824, 114176],
+    ['2100046233190', '2026-10-22', '호스 커플러 세트', 45000, -4860, 40140],
+    ['2100046301458', '2026-10-30', '배수 펌프 DP-400', 128000, -13824, 114176],
+  ]);
+  renderClosing();
+}
+
+/* ---------- events ---------- */
+['erp', 'cp'].forEach(side => {
+  const drop = $('drop-' + side), input = $('file-' + side);
+  input.addEventListener('change', () => { handleFile(side, input.files[0]); input.value = ''; });
+  drop.addEventListener('dragover', (e) => { e.preventDefault(); drop.classList.add('over'); });
+  drop.addEventListener('dragleave', () => drop.classList.remove('over'));
+  drop.addEventListener('drop', (e) => { e.preventDefault(); drop.classList.remove('over'); handleFile(side, e.dataTransfer.files[0]); });
+  $('map-' + side).addEventListener('change', (e) => {
+    const sel = e.target.closest('select'); if (!sel) return;
+    if (sel.dataset.sheet) { loadSheet(side, sel.value); renderClosing(); return; }
+    C[side].map[sel.dataset.k] = +sel.value;
+    sel.classList.toggle('warn', +sel.value < 0 && SPEC[side].fields.find(f => f.k === sel.dataset.k).req);
+    renderResult();
+  });
+});
+['c-filter', 'c-tol', 'c-month'].forEach(id => $(id).addEventListener('input', renderResult));
+$('c-result').addEventListener('click', (e) => {
+  const chip = e.target.closest('[data-filter]');
+  if (chip) { C.filter = chip.dataset.filter; renderCRows(); return; }
+  if (e.target.closest('#c-example')) { loadExample(); return; }
+  if (e.target.closest('#c-export')) exportResult();
+});
+$('c-result').addEventListener('input', (e) => { if (e.target.id === 'c-search') { C.q = e.target.value; renderCRows(); } });
+(function initClosing() {
+  const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - 1);
+  $('c-month').value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+  loadExample();
+})();
+
+/* ---------- module switching ---------- */
+function showModule(id) {
+  if (!MODULES.some(m => m.id === id)) id = MODULES[0].id;
+  MODULES.forEach(m => { $('mod-' + m.id).hidden = m.id !== id; });
+  document.querySelectorAll('.mod-btn').forEach(b => b.dataset.mod === id ? b.setAttribute('aria-current', 'page') : b.removeAttribute('aria-current'));
+  if (id === 'quote') fitSheet();
+}
+$('modList').addEventListener('click', (e) => {
+  const b = e.target.closest('.mod-btn'); if (!b) return;
+  if (location.hash.slice(1) === b.dataset.mod) showModule(b.dataset.mod); else location.hash = b.dataset.mod;
+});
+window.addEventListener('hashchange', () => showModule(location.hash.slice(1)));
+showModule(location.hash.slice(1));
+
+/* ---------- boot ---------- */
+(function boot() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(DRAFT_KEY) || 'null');
+    if (saved && saved.current && Array.isArray(saved.current.items)) { state.current = saved.current; state.currentId = saved.currentId || null; state.dirty = true; }
+  } catch (e) {}
+  refreshAutoNo();
+  fillForm();
+})();
+
+/* ---------- standalone: browser storage + normal downloads ---------- */
+const QUOTES_KEY = 'quotes-v1';
+const localDB = (() => {
+  const listeners = new Set();
+  const read = () => { try { return JSON.parse(localStorage.getItem(QUOTES_KEY) || '{}') || {}; } catch (e) { return {}; } };
+  const snap = () => {
+    const docs = Object.entries(read()).map(([id, d]) => ({ id, data: () => d }))
+      .sort((a, b) => (b.data().updatedAt || 0) - (a.data().updatedAt || 0));
+    return { docs, size: docs.length, empty: !docs.length, metadata: { fromCache: false, hasPendingWrites: false } };
+  };
+  const notify = () => setTimeout(() => { const s = snap(); listeners.forEach(fn => fn(s)); }, 0);
+  const write = (all) => { localStorage.setItem(QUOTES_KEY, JSON.stringify(all)); notify(); };
+  window.addEventListener('storage', (e) => { if (e.key === QUOTES_KEY) notify(); });
+  const strip = (d) => { const c = JSON.parse(JSON.stringify(d)); if (c.supplier) { delete c.supplier.seal; delete c.supplier.logo; } return c; };
+  const ref = (id) => ({
+    id,
+    set: async (d) => { const all = read(); all[id] = strip(d); write(all); },
+    delete: async () => { const all = read(); delete all[id]; write(all); },
+  });
+  const newId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+  const coll = { doc: (id) => ref(id || newId()), orderBy: () => coll, onSnapshot: (fn) => { listeners.add(fn); notify(); return () => listeners.delete(fn); } };
+  return { collection: () => coll, doc: (path) => ref(path.split('/')[1]) };
+})();
+
+(function bootStandalone() {
+  downloads = {
+    save: async ({ filename, data }) => {
+      const blob = data instanceof Blob ? data : new Blob([data]);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = filename;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 4000);
+      return { status: 'saved' };
+    },
+  };
+  $('btnPdf').disabled = false;
+  updateExportBtn();
+  db = localDB;
+  renderDocState();
+  setSync('on', '견적서는 이 브라우저에 저장돼요');
+  db.collection('quotes').orderBy('updatedAt', 'desc').onSnapshot((snap) => {
+    state.quotes = snap.docs.map(d => ({ id: d.id, data: d.data() }));
+    $('quoteCount').textContent = state.quotes.length;
+    renderDatalists();
+    if (state.currentId && !state.dirty) {
+      const q = state.quotes.find(x => x.id === state.currentId);
+      if (q && JSON.stringify(q.data) !== JSON.stringify(state.current)) { state.current = JSON.parse(JSON.stringify(q.data)); fillForm(); }
+      if (!q) { state.currentId = null; renderDocState(); }
+    }
+    if (!state.currentId && state.current.noAuto) { refreshAutoNo(); renderSheet(); }
+    if (!$('viewList').hidden) renderList();
+  });
+})();
+</script>
+</body>
+</html>
