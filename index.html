@@ -369,6 +369,7 @@ details.card li b{font-family:var(--f-num);font-weight:500;color:var(--fg);margi
 .aq-ai{display:flex;align-items:center;gap:12px 16px;flex-wrap:wrap}
 .aq-ai-text{flex:1 1 320px;display:flex;flex-direction:column;gap:2px;min-width:0}
 .aq-ai-actions{display:flex;gap:8px}
+#aq-ai-hint:empty{display:none}
 .aq-status{flex-basis:100%;font-size:13px;font-weight:600;border-radius:8px;padding:8px 12px;background:var(--surface-2);color:var(--fg)}
 .aq-status.ok{background:var(--ok-soft);color:var(--ok)}
 .aq-status.warn{background:var(--warn-soft);color:var(--warn)}
@@ -447,7 +448,6 @@ details.card li b{font-family:var(--f-num);font-weight:500;color:var(--fg);margi
     <div class="topbar">
       <div>
         <h1>견적서 양식</h1>
-        <p>견적서 칸을 눌러 바로 입력하세요. 수량과 단가를 넣으면 합계와 공급가액이 자동으로 계산되고, 입력한 내용 그대로 엑셀·워드·PDF로 받을 수 있어요.</p>
       </div>
       <div class="tpl-actions" id="qActions">
         <button class="btn primary" data-fmt="xlsx" data-tpl="xlsx" disabled><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11"/><path d="m7 10 5 5 5-5"/><path d="M5 20h14"/></svg>엑셀 다운로드</button>
@@ -492,7 +492,6 @@ details.card li b{font-family:var(--f-num);font-weight:500;color:var(--fg);margi
     <div class="topbar">
       <div>
         <h1>펌프 견적 자동화</h1>
-        <p>공내역서와 설계 도면을 올리면 펌프별 유량·양정·수량을 뽑아 표로 정리해요. 모델명을 확정하면 견적서 양식이나 이카운트 업로드용 엑셀로 넘길 수 있어요.</p>
       </div>
       <div class="tpl-actions">
         <button class="btn primary" id="aq-toQuote" disabled><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg>견적서 양식으로 보내기</button>
@@ -529,7 +528,7 @@ details.card li b{font-family:var(--f-num);font-weight:500;color:var(--fg);margi
         <div class="card aq-ai">
           <div class="aq-ai-text">
             <b>AI로 펌프 목록 뽑기</b>
-            <span class="hint" id="aq-ai-hint">올린 자료에서 펌프 항목만 찾아 유량을 LPM으로 맞춰 정리해요. 문서에 없는 값은 비워 둬요.</span>
+            <span class="hint" id="aq-ai-hint"></span>
           </div>
           <div class="aq-ai-actions">
             <button class="btn primary" id="aq-run" disabled>목록 뽑기</button>
@@ -592,7 +591,6 @@ details.card li b{font-family:var(--f-num);font-weight:500;color:var(--fg);margi
     <div class="topbar">
       <div>
         <h1>온라인 마감</h1>
-        <p>이카운트 판매전표와 쿠팡 정산내역 엑셀을 올리면 주문번호별로 금액을 맞춰 봐요. 대조 결과는 오른쪽 위 버튼으로 받을 수 있어요. 파일은 이 브라우저 안에서만 읽고 어디에도 저장하지 않아요.</p>
       </div>
       <div class="tpl-actions">
         <button class="btn primary" data-fmt="xlsx" data-cexp="xlsx" disabled><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11"/><path d="m7 10 5 5 5-5"/><path d="M5 20h14"/></svg>엑셀 다운로드</button>
